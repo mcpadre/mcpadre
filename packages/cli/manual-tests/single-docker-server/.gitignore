@@ -1,0 +1,12 @@
+opencode.json
+
+# mcpadre host configurations (machine-specific paths)
+# end mcpadre host configurations (machine-specific paths)
+
+# mcpadre configurations (machine-specific paths and server platform files)
+.mcp.json
+.mcpadre/logs
+.mcpadre/servers/*/.venv
+.mcpadre/servers/*/logs
+.mcpadre/servers/*/node_modules
+# end mcpadre configurations (machine-specific paths and server platform files)

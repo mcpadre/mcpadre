@@ -1,0 +1,8 @@
+.tmp/
+
+# mcpadre configurations (machine-specific paths and server platform files)
+.mcpadre/logs
+.mcpadre/servers/*/.venv
+.mcpadre/servers/*/logs
+.mcpadre/servers/*/node_modules
+# end mcpadre configurations (machine-specific paths and server platform files)

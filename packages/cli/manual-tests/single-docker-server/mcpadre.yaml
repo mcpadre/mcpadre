@@ -1,0 +1,12 @@
+version: 1
+options:
+  logMcpTraffic: true
+mcpServers:
+  aws-test:
+    container:
+      image: mcp/aws-core-mcp-server
+      tag: latest
+    env: {}
+hosts:
+  claude-code: true
+  opencode: true

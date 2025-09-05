@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "test-context7": {
+      "command": "pnpm",
+      "args": [
+        "run",
+        "--silent",
+        "dev",
+        "--dir",
+        "/Users/ed/Development/mcpadre/mcpadre.1/packages/cli/manual-tests/single-http-server",
+        "run",
+        "test-context7"
+      ]
+    }
+  }
+}

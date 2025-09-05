@@ -1,0 +1,83 @@
+{
+  "name": "mcpadre",
+  "version": "0.1.0",
+  "description": "Your Swiss Army samurai sword for managing MCP servers.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mcpadre": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "dev": "tsx src/cli/index.ts",
+    "dev:debug": "MCPADRE_LOG_LEVEL=debug tsx src/cli/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --fix",
+    "test:unit": "vitest run --silent passed-only --reporter=dot",
+    "test:integration": "vitest run --config vitest.config.integration.ts --silent passed-only --reporter=dot",
+    "test:integration:check": "pnpm run --silent test:integration --reporter=hanging-process",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage --reporter=dot",
+    "ai:check": "pnpm typecheck && pnpm lint && pnpm test:unit && pnpm test:integration:check"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "mcpadre"
+  ],
+  "author": "Ed Ropple <ed+mcpadre@ed3d.net>",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@lydell/node-pty": "^1.1.0",
+    "@inquirer/testing": "^2.1.49",
+    "@types/cli-table": "^0.3.4",
+    "@types/dockerode": "^3.3.43",
+    "@types/node": "^24.3.0",
+    "@types/semver": "^7.7.0",
+    "@types/which": "^3.0.4"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@coderspirit/nominal": "^4.1.1",
+    "@coderspirit/nominal-typebox": "^1.1.0",
+    "@commander-js/extra-typings": "^14.0.0",
+    "@iarna/toml": "^2.2.5",
+    "@inquirer/core": "^10.2.0",
+    "@inquirer/prompts": "^7.8.4",
+    "@inquirer/type": "^3.0.8",
+    "@sinclair/typebox": "^0.34.40",
+    "ajv": "^8.17.1",
+    "ajv-errors": "^3.0.0",
+    "ajv-formats": "^3.0.1",
+    "chalk": "^5.6.0",
+    "cli-highlight": "^2.1.11",
+    "cli-table3": "^0.6.5",
+    "commander": "^14.0.0",
+    "dockerode": "^4.0.7",
+    "ensure-gitignore": "^1.2.0",
+    "env-paths": "^3.0.0",
+    "execa": "^9.6.0",
+    "jsondiffpatch": "^0.7.3",
+    "micromustache": "^8.0.3",
+    "pino": "^9.9.0",
+    "pino-abstract-transport": "^2.0.0",
+    "semver": "^7.7.2",
+    "shlex": "^3.0.0",
+    "tempfile": "^5.0.0",
+    "tree-kill": "^1.2.2",
+    "which": "^5.0.0",
+    "yaml": "^2.8.1"
+  },
+  "overrides": {
+    "@coderspirit/nominal-typebox": {
+      "@sinclair/typebox": "$@sinclair/typebox"
+    }
+  }
+}

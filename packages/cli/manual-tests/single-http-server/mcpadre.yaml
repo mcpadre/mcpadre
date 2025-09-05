@@ -1,0 +1,9 @@
+version: 1
+options:
+  logMcpTraffic: true
+mcpServers:
+  test-context7:
+    http:
+      url: https://mcp.context7.com/mcp
+hosts:
+  claude-code: true

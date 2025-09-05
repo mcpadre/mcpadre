@@ -1,0 +1,12 @@
+version: 1
+options:
+  logMcpTraffic: false
+  disableAllSandboxes: false
+mcpServers:
+  desktop-commander-test:
+    node:
+      package: "@wonderwhy-er/desktop-commander"
+      version: "0.2.9"
+      args: "--verbose"
+hosts:
+  claude-code: true

@@ -1,0 +1,333 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Run tests on all platforms
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest # Linux x64
+          - macos-latest # macOS ARM64 (M1 runners)
+          - macos-13 # macOS x64 (Intel runners)
+        node: [22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "pnpm"
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run tests and checks
+        run: pnpm typecheck && pnpm lint && pnpm test
+        env:
+          CI: true
+
+      # Upload test results even if tests fail
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-node${{ matrix.node }}
+          path: |
+            coverage/
+            test-results/
+          retention-days: 7
+
+  # Build ONCE on Linux - output is platform-agnostic JavaScript
+  build-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # Create npm package tarball
+      - name: Pack npm package
+        run: |
+          cd packages/cli
+          pnpm pack --pack-destination ./dist-artifacts
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: packages/cli/dist-artifacts/*.tgz
+          retention-days: 30
+
+  # Test the single package installs correctly on all platforms
+  test-installation:
+    needs: build-package
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - macos-13
+        node: [22]
+
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: ./package
+
+      - name: Test installation
+        run: |
+          # Install globally - npm will compile native deps for this platform
+          npm install -g ./package/*.tgz
+
+          # Verify installation
+          mcpadre --version
+          mcpadre --help
+
+          # Test init command
+          mkdir test-project
+          cd test-project
+          mcpadre init --host cursor --yes
+
+          # Verify config was created
+          test -f mcpadre.yaml
+
+  # Publish to npm on semver tags
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, test-installation]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # For npm provenance
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Validate tag format
+        id: validate-tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "Tag: $TAG"
+
+          # Extract version from tag (remove 'v' prefix)
+          VERSION=${TAG#v}
+          echo "Version: $VERSION"
+
+          # Validate semver format using Node.js semver package
+          if node -e "
+            const semver = require('semver');
+            const version = '$VERSION';
+            if (!semver.valid(version)) {
+              console.error('Invalid semver version:', version);
+              process.exit(1);
+            }
+            console.log('Valid semver version:', version);
+          "; then
+            echo "valid=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          else
+            echo "valid=false" >> $GITHUB_OUTPUT
+            echo "❌ Tag $TAG does not contain a valid semver version"
+            exit 1
+          fi
+
+      - name: Verify package.json version matches tag
+        if: steps.validate-tag.outputs.valid == 'true'
+        run: |
+          cd packages/cli
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${{ steps.validate-tag.outputs.version }}"
+
+          echo "Package version: $PACKAGE_VERSION"
+          echo "Tag version: $TAG_VERSION"
+
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "❌ Package version ($PACKAGE_VERSION) does not match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+
+          echo "✅ Package version matches tag version"
+
+      - name: Install dependencies and build
+        if: steps.validate-tag.outputs.valid == 'true'
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Publish to npm
+        if: steps.validate-tag.outputs.valid == 'true'
+        run: |
+          cd packages/cli
+
+          # Publish with provenance
+          npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.validate-tag.outputs.valid == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ steps.validate-tag.outputs.tag }}';
+            const version = '${{ steps.validate-tag.outputs.version }}';
+
+            // Create release
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `mcpadre ${version}`,
+              body: `## mcpadre ${version}
+              
+              Published to npm: \`npm install mcpadre@${version}\`
+              
+              ### Installation
+              
+              \`\`\`bash
+              # Global installation
+              npm install -g mcpadre@${version}
+              
+              # Or use latest
+              npm install -g mcpadre
+              \`\`\`
+              
+              ### Platforms Supported
+              
+              - ✅ Linux x64/ARM64
+              - ✅ macOS x64/ARM64 (Intel & Apple Silicon)
+              - ✅ Node.js 22
+              
+              ### Changes
+              
+              See commit history for detailed changes in this release.
+              `,
+              draft: false,
+              prerelease: version.includes('-')
+            });
+
+            console.log(\`Created release: \${release.data.html_url}\`);
+
+  # Create release comment on PRs
+  pr-comment:
+    if: github.event_name == 'pull_request'
+    needs: [test, test-installation]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: ./package
+
+      - name: Get package info
+        id: package
+        run: |
+          TARBALL=$(ls ./package/*.tgz | head -1)
+          SIZE=$(ls -lh "$TARBALL" | awk '{print $5}')
+          NAME=$(basename "$TARBALL")
+
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+
+      - name: Create test matrix summary
+        id: matrix
+        run: |
+          echo "## Test Results Summary" > summary.md
+          echo "" >> summary.md
+          echo "| Platform | Node 22 |" >> summary.md
+          echo "|----------|---------|" >> summary.md
+          echo "| Linux x64 | ✅ |" >> summary.md
+          echo "| macOS ARM64 | ✅ |" >> summary.md
+          echo "| macOS x64 | ✅ |" >> summary.md
+          echo "" >> summary.md
+          echo "Integration tests: Run locally (not in CI for reliability)" >> summary.md
+
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat summary.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `### 📦 Build Artifacts Ready
+
+            **Package**: \`${{ steps.package.outputs.name }}\`
+            **Size**: ${{ steps.package.outputs.size }}
+            **Platforms**: Linux (x64/ARM64), macOS (x64/ARM64)
+            **Node.js**: 22
+
+            ${{ steps.matrix.outputs.summary }}
+
+            #### Test Installation
+
+            \`\`\`bash
+            # Download and test this PR's build
+            curl -L -o mcpadre.tgz "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/npm-package"
+            npm install -g ./mcpadre.tgz
+            mcpadre --version
+            \`\`\`
+
+            Ready for release! 🚀
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

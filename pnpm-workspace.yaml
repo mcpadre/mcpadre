@@ -1,0 +1,11 @@
+packages:
+  - packages/*
+
+linkWorkspacePackages: true
+
+onlyBuiltDependencies:
+  - cpu-features
+  - esbuild
+  - node-pty
+  - protobufjs
+  - ssh2

@@ -1,0 +1,222 @@
+// pattern: Functional Core
+
+import { parse as parseToml } from "@iarna/toml";
+
+import type { PythonOptionsV1 } from "../../config/types/v1/server/index.js";
+
+/**
+ * Parsed pyproject.toml structure for version comparison
+ */
+export interface ParsedPyprojectToml {
+  project?: {
+    dependencies?: string[];
+    "requires-python"?: string;
+  };
+}
+
+/**
+ * Result of determining Python upgrade action
+ */
+export interface VersionChangeResult {
+  /** Whether any changes were detected */
+  hasChanges: boolean;
+  /** List of human-readable changes */
+  changes: string[];
+  /** Action to take based on changes and configuration */
+  action: "CREATE" | "SYNC" | "UPGRADE" | "SKIP";
+}
+
+/**
+ * Version files content for Python tooling integration
+ */
+export interface VersionFiles {
+  /** Content for .python-version file */
+  pythonVersion: string;
+  /** Content for .tool-versions file */
+  toolVersions: string;
+}
+
+/**
+ * Options for determining upgrade action
+ */
+export interface UpgradeOptions {
+  /** Force upgrade even when not normally allowed */
+  force: boolean;
+  /** Allow implicit upgrades when package versions change */
+  implicitUpgrade: boolean;
+}
+
+/**
+ * Determines what action to take for Python dependency management
+ *
+ * @param existingToml Parsed existing pyproject.toml (null if file doesn't exist)
+ * @param newConfig New Python configuration from mcpadre config
+ * @param options Upgrade behavior options
+ * @returns Action decision with changes and reasoning
+ */
+export function determinePythonUpgrade(
+  existingToml: ParsedPyprojectToml | null,
+  newConfig: PythonOptionsV1,
+  options: UpgradeOptions
+): VersionChangeResult {
+  // No existing configuration - fresh install
+  if (!existingToml) {
+    return {
+      hasChanges: true,
+      changes: ["Creating new Python project"],
+      action: "CREATE",
+    };
+  }
+
+  // Detect version changes
+  const versionChanges = detectVersionChanges(existingToml, newConfig);
+
+  // No changes detected - just sync environment
+  if (!versionChanges.hasChanges) {
+    return {
+      hasChanges: false,
+      changes: [],
+      action: "SYNC",
+    };
+  }
+
+  // Changes detected - check if upgrade is allowed
+  const shouldUpgrade = options.force || options.implicitUpgrade;
+
+  if (!shouldUpgrade) {
+    return {
+      hasChanges: true,
+      changes: versionChanges.changes,
+      action: "SKIP",
+    };
+  }
+
+  // Upgrade is allowed
+  return {
+    hasChanges: true,
+    changes: versionChanges.changes,
+    action: "UPGRADE",
+  };
+}
+
+/**
+ * Detect version changes between existing and new configuration
+ *
+ * @param existingToml Parsed existing pyproject.toml
+ * @param newPython New Python configuration
+ * @returns Change detection result
+ */
+export function detectVersionChanges(
+  existingToml: ParsedPyprojectToml,
+  newPython: PythonOptionsV1
+): { hasChanges: boolean; changes: string[] } {
+  const changes: string[] = [];
+
+  // Check Python version if specified in new config
+  if (newPython.pythonVersion) {
+    const existingPythonVersion = existingToml.project?.["requires-python"];
+    const newPythonVersionSpec = `==${newPython.pythonVersion}`;
+    if (existingPythonVersion !== newPythonVersionSpec) {
+      changes.push(
+        `Python version: ${existingPythonVersion ?? "unspecified"} → ${newPythonVersionSpec}`
+      );
+    }
+  }
+
+  // Check package version
+  const existingDeps = existingToml.project?.dependencies ?? [];
+  const newPackageSpec = `${newPython.package}==${newPython.version}`;
+
+  const existingPackageDep = existingDeps.find(dep =>
+    dep.startsWith(`${newPython.package}==`)
+  );
+
+  if (!existingPackageDep || existingPackageDep !== newPackageSpec) {
+    changes.push(
+      `Package version: ${existingPackageDep ?? "not found"} → ${newPackageSpec}`
+    );
+  }
+
+  return {
+    hasChanges: changes.length > 0,
+    changes,
+  };
+}
+
+/**
+ * Generate pyproject.toml content for a Python MCP server
+ *
+ * @param serverName Name of the server (used in project name)
+ * @param python Python configuration
+ * @returns Complete pyproject.toml content
+ */
+export function generatePyprojectToml(
+  serverName: string,
+  python: PythonOptionsV1
+): string {
+  const pythonVersionLine = python.pythonVersion
+    ? `requires-python = "==${python.pythonVersion}"`
+    : "";
+
+  return `[project]
+name = "mcpadre-deps-${serverName}"
+version = "0.0.0"${pythonVersionLine ? `\n${pythonVersionLine}` : ""}
+dependencies = [
+    "${python.package}==${python.version}"
+]
+`;
+}
+
+/**
+ * Parse pyproject.toml content for version comparison
+ *
+ * @param content Raw TOML content
+ * @returns Parsed structure with relevant fields
+ */
+export function parsePyprojectToml(content: string): ParsedPyprojectToml {
+  try {
+    const parsed = parseToml(content) as Record<string, unknown>;
+
+    // Extract project section and its relevant fields
+    const projectSection = parsed["project"] as
+      | Record<string, unknown>
+      | undefined;
+    if (!projectSection) {
+      return { project: {} };
+    }
+
+    const projectResult: Record<string, unknown> = {};
+
+    // Extract requires-python
+    if (typeof projectSection["requires-python"] === "string") {
+      projectResult["requires-python"] = projectSection["requires-python"];
+    }
+
+    // Extract dependencies
+    if (Array.isArray(projectSection["dependencies"])) {
+      projectResult["dependencies"] = projectSection["dependencies"].filter(
+        (dep): dep is string => typeof dep === "string"
+      );
+    }
+
+    const result: ParsedPyprojectToml = { project: projectResult };
+
+    return result;
+  } catch {
+    // If TOML parsing fails, return minimal structure
+    return { project: {} };
+  }
+}
+
+/**
+ * Generate content for Python version files
+ *
+ * @param pythonVersion Python version string (e.g., "3.11.0")
+ * @returns Version file contents
+ */
+export function generateVersionFiles(pythonVersion: string): VersionFiles {
+  return {
+    pythonVersion: `${pythonVersion}\n`,
+    toolVersions: `python ${pythonVersion}\n`,
+  };
+}

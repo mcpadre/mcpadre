@@ -1,0 +1,12 @@
+version: 1
+options:
+  logMcpTraffic: false
+  disableAllSandboxes: false
+mcpServers:
+  mcp-sleep:
+    python:
+      package: mcp-sleep
+      version: "0.1.1"
+      pythonVersion: "3.13.6"
+hosts:
+  claude-code: true

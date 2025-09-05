@@ -1,0 +1,5 @@
+# mcpadre server-specific files (per-user)
+.venv/
+*.pyc
+__pycache__/
+*.pyo

@@ -1,0 +1,18 @@
+version: 1
+options:
+  logMcpTraffic: true
+mcpServers:
+  aws-test:
+    container:
+      image: mcp/aws-core-mcp-server
+      tag: latest
+    env: {}
+  desktop-commander-test:
+    node:
+      package: "@wonderwhy-er/desktop-commander"
+      version: "0.2.9"
+      args: --verbose
+hosts:
+  claude-code: true
+  opencode: true
+  vscode: true

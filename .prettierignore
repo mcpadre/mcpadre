@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+*.min.js
+*.min.css
+package-lock.json
+pnpm-lock.yaml
+.pnpm-debug.log*
+*.tgz
+*.tar.gz
