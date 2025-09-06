@@ -284,23 +284,6 @@ jobs:
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "size=$SIZE" >> $GITHUB_OUTPUT
 
-      - name: Create test matrix summary
-        id: matrix
-        run: |
-          echo "## Test Results Summary" > summary.md
-          echo "" >> summary.md
-          echo "| Platform | Node 22 |" >> summary.md
-          echo "|----------|---------|" >> summary.md
-          echo "| Linux x64 | ✅ |" >> summary.md
-          echo "| macOS ARM64 | ✅ |" >> summary.md
-          echo "| macOS x64 | ✅ |" >> summary.md
-          echo "" >> summary.md
-          echo "Integration tests: Run locally (not in CI for reliability)" >> summary.md
-
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          cat summary.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - uses: actions/github-script@v7
         with:
           script: |
@@ -311,14 +294,19 @@ jobs:
             **Platforms**: Linux (x64/ARM64), macOS (x64/ARM64)
             **Node.js**: 22
 
-            ${{ steps.matrix.outputs.summary }}
-
             #### Test Installation
 
             \`\`\`bash
-            # Download and test this PR's build
-            curl -L -o mcpadre.tgz "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/npm-package"
-            npm install -g ./mcpadre.tgz
+            # Download the npm-package artifact (zip file containing the tarball)
+            curl -L -o npm-package.zip "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/npm-package"
+
+            # Extract the tarball from the zip
+            unzip npm-package.zip
+
+            # Install the specific tarball globally
+            npm install -g ${{ steps.package.outputs.name }}
+
+            # Verify installation
             mcpadre --version
             \`\`\`
 
