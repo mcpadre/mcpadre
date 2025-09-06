@@ -4,11 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize]
     # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    paths:
+      - "src/**/*.ts"
+      - "src/**/*.tsx"
+      - "src/**/*.js"
+      - "src/**/*.jsx"
 
 jobs:
   claude-review:
@@ -43,9 +43,9 @@ jobs:
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
             Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
+            - Alignment of the code with the description of the pull request and any issues linked
+            - Code quality and best practices, using CLAUDE.md and general good-sense principles as a base
+            - Potential bugs or issues wih the code as written
             - Security concerns
             - Test coverage
             
