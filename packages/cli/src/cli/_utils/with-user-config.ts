@@ -1,10 +1,10 @@
 // pattern: Imperative Shell
 
-import { loadRequiredUserConfig } from "../config/loaders/settings-user-loader.js";
+import { loadRequiredUserConfig } from "../../config/loaders/settings-user-loader.js";
 
 import { withConfigBase } from "./with-config-base.js";
 
-import type { SettingsUser } from "../config/types/index.js";
+import type { SettingsUser } from "../../config/types/index.js";
 
 /**
  * Higher-order function that wraps a Commander action to automatically load user configuration

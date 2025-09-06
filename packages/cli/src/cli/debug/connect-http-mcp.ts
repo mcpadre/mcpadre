@@ -6,7 +6,7 @@ import { createTarget } from "../../runner/servers/common/target.js";
 import { HttpMcpClient } from "../../runner/servers/http/client.js";
 import { InteractiveSessionManager } from "../../runner/session/index.js";
 import { CLI_LOGGER } from "../_deps.js";
-import { withErrorHandling } from "../utils/with-error-handling.js";
+import { withErrorHandling } from "../_utils/with-error-handling.js";
 
 import type { HttpMcpServer } from "../../config/types/index.js";
 

@@ -3,19 +3,19 @@
 
 import { join, resolve } from "path";
 
-import { isProjectCapableHost } from "../../config/types/v1/hosts.js";
-import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
-import { discoverProjectConfig } from "../../installer/discovery/project-discovery.js";
-import { ConfigurationError } from "../../utils/errors.js";
-import { getProjectCapableHosts, isValidHost } from "../host/host-logic.js";
+import { isProjectCapableHost } from "../../../config/types/v1/hosts.js";
+import { writeSettingsProjectToFile } from "../../../config/writers/settings-project-writer.js";
+import { discoverProjectConfig } from "../../../installer/discovery/project-discovery.js";
+import { ConfigurationError } from "../../../utils/errors.js";
+import { getProjectCapableHosts, isValidHost } from "../../host/host-logic.js";
 
 import { BaseConfigContext } from "./config-context.js";
 
 import type {
   SettingsProject,
   SettingsUser,
-} from "../../config/types/index.js";
-import type { SupportedHostV1 } from "../../config/types/v1/hosts.js";
+} from "../../../config/types/index.js";
+import type { SupportedHostV1 } from "../../../config/types/v1/hosts.js";
 
 /**
  * Project configuration context implementation

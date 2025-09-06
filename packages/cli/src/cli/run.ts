@@ -2,14 +2,14 @@
 
 import { Command } from "@commander-js/extra-typings";
 
-import { withConfigContextAndErrorHandling } from "../cli-helpers/with-config-context-and-error-handling.js";
 import { runMcpServer } from "../runner/index.js";
 
+import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
 import { getUserDir } from "./_globals.js";
 
 import type { SettingsProject, SettingsUser } from "../config/types/index.js";
-import type { ConfigContext } from "./contexts/index.js";
+import type { ConfigContext } from "./_utils/contexts/index.js";
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function makeRunCommand() {

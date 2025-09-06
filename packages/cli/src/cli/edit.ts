@@ -8,8 +8,6 @@ import * as jsondiffpatch from "jsondiffpatch";
 import { tmpdir } from "os";
 import { basename, join } from "path";
 
-import { promptForConfirmation } from "../cli-helpers/interactive-prompts.js";
-import { withProjectConfigAndErrorHandling } from "../cli-helpers/with-project-config-and-error-handling.js";
 import {
   loadSettingsProjectFromFile,
   validateSettingsProjectObject,
@@ -21,6 +19,8 @@ import {
 } from "../config/loaders/settings-user-loader.js";
 import { writeSettingsUserToFile } from "../config/writers/settings-user-writer.js";
 
+import { promptForConfirmation } from "./_utils/interactive-prompts.js";
+import { withProjectConfigAndErrorHandling } from "./_utils/with-project-config-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
 import { getUserDir, isUserMode } from "./_globals.js";
 

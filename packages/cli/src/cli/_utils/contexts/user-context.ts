@@ -7,20 +7,20 @@ import {
   findUserConfig,
   loadSettingsUserFromFile,
   validateSettingsUserObject,
-} from "../../config/loaders/settings-user-loader.js";
-import { isUserCapableHost } from "../../config/types/v1/hosts.js";
-import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
-import { ConfigurationError } from "../../utils/errors.js";
-import { getUserDir } from "../_globals.js";
-import { getUserCapableHosts } from "../host/host-logic.js";
+} from "../../../config/loaders/settings-user-loader.js";
+import { isUserCapableHost } from "../../../config/types/v1/hosts.js";
+import { writeSettingsUserToFile } from "../../../config/writers/settings-user-writer.js";
+import { ConfigurationError } from "../../../utils/errors.js";
+import { getUserDir } from "../../_globals.js";
+import { getUserCapableHosts } from "../../host/host-logic.js";
 
 import { BaseConfigContext } from "./config-context.js";
 
 import type {
   SettingsProject,
   SettingsUser,
-} from "../../config/types/index.js";
-import type { SupportedHostV1 } from "../../config/types/v1/hosts.js";
+} from "../../../config/types/index.js";
+import type { SupportedHostV1 } from "../../../config/types/v1/hosts.js";
 
 /**
  * User configuration context implementation

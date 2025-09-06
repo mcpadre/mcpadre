@@ -1,10 +1,13 @@
 // pattern: Imperative Shell
 
-import { createConfigContext } from "../cli/contexts/index.js";
-import { withErrorHandling } from "../cli/utils/with-error-handling.js";
+import { createConfigContext } from "./contexts/index.js";
+import { withErrorHandling } from "./with-error-handling.js";
 
-import type { ConfigContext } from "../cli/contexts/index.js";
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
+import type {
+  SettingsProject,
+  SettingsUser,
+} from "../../config/types/index.js";
+import type { ConfigContext } from "./contexts/index.js";
 
 /**
  * Convenience function to wrap a Commander action with ConfigContext and error handling

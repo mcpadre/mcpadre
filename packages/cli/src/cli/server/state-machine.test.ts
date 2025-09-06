@@ -8,7 +8,7 @@ import {
   createServerRemoveStateMachine,
   InteractiveCommandStateMachine,
   type StateConfig,
-} from "../../cli-helpers/state-machine.js";
+} from "../_utils/state-machine.js";
 
 describe("InteractiveCommandStateMachine", () => {
   describe("Basic State Management", () => {

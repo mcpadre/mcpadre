@@ -2,9 +2,9 @@
 
 import { input, select } from "@inquirer/prompts";
 
-import { RegistryAdapterFactory } from "../cli/server/registry/factory.js";
+import { RegistryAdapterFactory } from "../server/registry/factory.js";
 
-import type { RegistryType } from "../cli/server/registry/types.js";
+import type { RegistryType } from "../server/registry/types.js";
 import type { NavigationResult } from "./navigation-prompts.js";
 
 /**

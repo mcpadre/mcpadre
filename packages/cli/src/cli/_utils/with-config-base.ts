@@ -1,8 +1,8 @@
 // pattern: Imperative Shell
 
-import { CLI_LOGGER } from "./_deps.js";
+import { CLI_LOGGER } from "../_deps.js";
 
-import type { SettingsBase } from "../config/types/index.js";
+import type { SettingsBase } from "../../config/types/index.js";
 
 export type ConfigLoader<T extends SettingsBase> = () => Promise<{
   config: T;

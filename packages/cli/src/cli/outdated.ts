@@ -5,10 +5,10 @@ import { Command } from "@commander-js/extra-typings";
 import Table from "cli-table3";
 import Docker from "dockerode";
 
-import { withProjectConfigAndErrorHandling } from "../cli-helpers/with-project-config-and-error-handling.js";
-import { withUserConfigAndErrorHandling } from "../cli-helpers/with-user-config-and-error-handling.js";
 import { checkAllOutdated } from "../installer/outdated/index.js";
 
+import { withProjectConfigAndErrorHandling } from "./_utils/with-project-config-and-error-handling.js";
+import { withUserConfigAndErrorHandling } from "./_utils/with-user-config-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
 import { isUserMode } from "./_globals.js";
 

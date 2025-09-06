@@ -2,7 +2,6 @@
 
 import { Command, Option } from "@commander-js/extra-typings";
 
-import { withConfigContextAndErrorHandling } from "../cli-helpers/with-config-context-and-error-handling.js";
 import { loadUserConfig } from "../config/loaders/settings-user-loader.js";
 import { mergeUserProjectConfig } from "../config/mergers/user-project-merger.js";
 import {
@@ -10,11 +9,12 @@ import {
   installForAllEnabledUserHosts,
 } from "../installer/installer.js";
 
+import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
 
 import type { SettingsProject, SettingsUser } from "../config/types/index.js";
 import type { BulkInstallResult } from "../installer/installer.js";
-import type { ConfigContext } from "./contexts/index.js";
+import type { ConfigContext } from "./_utils/contexts/index.js";
 
 /**
  * Creates the install command for setting up host configurations

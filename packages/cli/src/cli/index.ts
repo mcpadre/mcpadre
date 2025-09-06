@@ -16,7 +16,7 @@ import {
   setWorkspaceDir,
 } from "./_globals.js";
 import { makeEditCommand } from "./edit.js";
-import { makeHelloCommand } from "./hello.js";
+import { makeHelpmeCommand } from "./helpme.js";
 import { makeInitCommand } from "./init.js";
 import { makeInstallCommand } from "./install.js";
 import { makeOutdatedCommand } from "./outdated.js";
@@ -68,7 +68,7 @@ function getDefaultLogFormat(): LogFormat {
 // Define the root command
 export const rootCommand = new Command("mcpadre")
   .version("0.1.0")
-  .description("The Swiss Army samurai sword for your MCP servers")
+  .description("the missing parts of MCP management")
   .addOption(
     new Option("-l, --log-level <level>", "Set log level")
       .choices(["error", "warn", "info", "debug", "trace"])
@@ -156,9 +156,9 @@ export const rootCommand = new Command("mcpadre")
       }
     }
   })
-  .addCommand(makeHelloCommand())
   .addCommand(makeDebugCommand())
   .addCommand(makeEditCommand())
+  .addCommand(makeHelpmeCommand())
   .addCommand(makeHostCommand())
   .addCommand(makeInitCommand())
   .addCommand(makeServerCommand())

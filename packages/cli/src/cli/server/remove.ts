@@ -2,15 +2,15 @@
 
 import { Command } from "@commander-js/extra-typings";
 
-import { isInteractiveEnvironment } from "../../cli-helpers/interactive-prompts.js";
-import { promptForConfirmationWithEscapeHandling } from "../../cli-helpers/navigation-prompts.js";
-import { withConfigContextAndErrorHandling } from "../../cli-helpers/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "../_deps.js";
 import {
   CommonArguments,
   CommonOptions,
   HelpTextPatterns,
-} from "../utils/command-factory.js";
+} from "../_utils/command-factory.js";
+import { isInteractiveEnvironment } from "../_utils/interactive-prompts.js";
+import { promptForConfirmationWithEscapeHandling } from "../_utils/navigation-prompts.js";
+import { withConfigContextAndErrorHandling } from "../_utils/with-config-context-and-error-handling.js";
 
 import {
   removeServerFromConfig,
@@ -21,7 +21,7 @@ import type {
   SettingsProject,
   SettingsUser,
 } from "../../config/types/index.js";
-import type { ConfigContext } from "../contexts/index.js";
+import type { ConfigContext } from "../_utils/contexts/index.js";
 
 /**
  * Creates the `server remove` command for removing servers from mcpadre configuration

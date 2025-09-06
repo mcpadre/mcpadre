@@ -3,7 +3,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as globals from "../_globals.js";
+import * as globals from "../../_globals.js";
 
 import { createConfigContext } from "./index.js";
 import { ProjectConfigContext } from "./project-context.js";
@@ -12,7 +12,7 @@ import { UserConfigContext } from "./user-context.js";
 import type {
   SettingsProject,
   SettingsUser,
-} from "../../config/types/index.js";
+} from "../../../config/types/index.js";
 
 describe("ConfigContext implementations", () => {
   let tempDir: string;

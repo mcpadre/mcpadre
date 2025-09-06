@@ -15,7 +15,8 @@ export default {
         "refactor",
         "revert",
         "style",
-        "test"
+        "test",
+	"merge"
       ]
     ],
     "type-case": [2, "always", "lower-case"],

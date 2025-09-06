@@ -6,13 +6,6 @@ import { DEFAULT_THEME, highlight } from "cli-highlight";
 import { stringify as yamlStringify } from "yaml";
 
 import {
-  formatServerList,
-  isInteractiveEnvironment,
-  promptForConfirmation,
-} from "../../cli-helpers/interactive-prompts.js";
-import { runRegistryServerAddFlow } from "../../cli-helpers/registry-flow.js";
-import { withConfigContextAndErrorHandling } from "../../cli-helpers/with-config-context-and-error-handling.js";
-import {
   isRemoteSource,
   loadAndValidateRemoteServerSpec,
   RemoteServerSpecError,
@@ -20,6 +13,13 @@ import {
 import { loadAndValidateServerSpec } from "../../config/loaders/serverspec-loader.js";
 import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
 import { CLI_LOGGER } from "../_deps.js";
+import {
+  formatServerList,
+  isInteractiveEnvironment,
+  promptForConfirmation,
+} from "../_utils/interactive-prompts.js";
+import { runRegistryServerAddFlow } from "../_utils/registry-flow.js";
+import { withConfigContextAndErrorHandling } from "../_utils/with-config-context-and-error-handling.js";
 
 import {
   runInteractiveServerAddFlow,
@@ -32,7 +32,7 @@ import type {
   SettingsProject,
   SettingsUser,
 } from "../../config/types/index.js";
-import type { ConfigContext } from "../contexts/index.js";
+import type { ConfigContext } from "../_utils/contexts/index.js";
 
 /**
  * Highlights YAML content with custom colors for terminal display

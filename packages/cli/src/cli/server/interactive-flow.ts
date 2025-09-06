@@ -4,16 +4,16 @@ import chalk from "chalk";
 import { DEFAULT_THEME, highlight } from "cli-highlight";
 import { stringify as yamlStringify } from "yaml";
 
+import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
+import { CLI_LOGGER } from "../_deps.js";
 import {
   promptForConfirmationWithEscapeHandling,
   promptForServerSelectionWithNavigation,
-} from "../../cli-helpers/navigation-prompts.js";
+} from "../_utils/navigation-prompts.js";
 import {
   CommandState,
   createServerAddStateMachine,
-} from "../../cli-helpers/state-machine.js";
-import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
-import { CLI_LOGGER } from "../_deps.js";
+} from "../_utils/state-machine.js";
 
 import {
   selectServersToAdd,

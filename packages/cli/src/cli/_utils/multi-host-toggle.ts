@@ -12,16 +12,19 @@ import {
   useState,
 } from "@inquirer/core";
 
+import { type SupportedHostV1 } from "../../config/types/v1/hosts.js";
 import {
   getProjectCapableHosts,
   getUserCapableHosts,
   isHostEnabled,
-} from "../cli/host/host-logic.js";
-import { type SupportedHostV1 } from "../config/types/v1/hosts.js";
+} from "../host/host-logic.js";
 
 import { isInteractiveEnvironment } from "./interactive-prompts.js";
 
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
+import type {
+  SettingsProject,
+  SettingsUser,
+} from "../../config/types/index.js";
 
 /**
  * Host display names for user-friendly interface

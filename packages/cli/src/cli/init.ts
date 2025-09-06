@@ -3,10 +3,9 @@
 import { Command } from "@commander-js/extra-typings";
 import { mkdir } from "fs/promises";
 
-import { isInteractiveEnvironment } from "../cli-helpers/interactive-prompts.js";
-import { promptMultiHostToggle } from "../cli-helpers/multi-host-toggle.js";
-
-import { createConfigContext } from "./contexts/index.js";
+import { createConfigContext } from "./_utils/contexts/index.js";
+import { isInteractiveEnvironment } from "./_utils/interactive-prompts.js";
+import { promptMultiHostToggle } from "./_utils/multi-host-toggle.js";
 import { getSimilarHosts, isValidHost } from "./host/host-logic.js";
 import { CLI_LOGGER } from "./_deps.js";
 

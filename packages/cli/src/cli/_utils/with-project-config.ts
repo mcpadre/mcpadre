@@ -1,11 +1,11 @@
 // pattern: Imperative Shell
 
-import { discoverProjectConfig } from "../installer/discovery/project-discovery.js";
+import { discoverProjectConfig } from "../../installer/discovery/project-discovery.js";
+import { getNoParentFlag } from "../_globals.js";
 
-import { getNoParentFlag } from "./_globals.js";
 import { withConfigBase } from "./with-config-base.js";
 
-import type { SettingsProject } from "../config/types/index.js";
+import type { SettingsProject } from "../../config/types/index.js";
 
 /**
  * Higher-order function that wraps a Commander action to automatically load project configuration

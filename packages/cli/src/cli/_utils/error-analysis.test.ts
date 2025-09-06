@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { analyzeError } from "../../cli-helpers/error-analysis.js";
+import { analyzeError } from "./error-analysis.js";
 
 describe("analyzeError", () => {
   describe("filesystem errors", () => {

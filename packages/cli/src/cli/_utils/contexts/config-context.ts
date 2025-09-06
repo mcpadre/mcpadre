@@ -7,8 +7,8 @@ import { join } from "path";
 import type {
   SettingsProject,
   SettingsUser,
-} from "../../config/types/index.js";
-import type { SupportedHostV1 } from "../../config/types/v1/hosts.js";
+} from "../../../config/types/index.js";
+import type { SupportedHostV1 } from "../../../config/types/v1/hosts.js";
 
 /**
  * Configuration context that encapsulates all differences between

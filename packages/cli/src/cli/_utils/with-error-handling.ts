@@ -1,7 +1,8 @@
 // pattern: Imperative Shell
 
-import { analyzeError } from "../../cli-helpers/error-analysis.js";
 import { CLI_LOGGER } from "../_deps.js";
+
+import { analyzeError } from "./error-analysis.js";
 
 /**
  * Higher-order function that wraps Commander.js actions with consistent error handling

@@ -1,10 +1,9 @@
 // pattern: Imperative Shell
 
-import { withUserConfig } from "../cli/with-user-config.js";
-
 import { withConfigAndErrorHandlingBase } from "./with-config-and-error-handling-base.js";
+import { withUserConfig } from "./with-user-config.js";
 
-import type { SettingsUser } from "../config/types/index.js";
+import type { SettingsUser } from "../../config/types/index.js";
 
 /**
  * Convenience function to wrap a Commander action with both user config loading and error handling

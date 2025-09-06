@@ -14,7 +14,7 @@ import {
   ServerError,
   UserCancellationError,
   ValidationError,
-} from "../utils/errors.js";
+} from "../../utils/errors.js";
 
 /**
  * Represents a categorized error with user-friendly messaging

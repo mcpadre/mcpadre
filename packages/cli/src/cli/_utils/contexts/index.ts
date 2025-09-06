@@ -1,7 +1,7 @@
 // pattern: Functional Core
 // Factory and exports for configuration contexts
 
-import { isUserMode } from "../_globals.js";
+import { isUserMode } from "../../_globals.js";
 
 import { ProjectConfigContext } from "./project-context.js";
 import { UserConfigContext } from "./user-context.js";

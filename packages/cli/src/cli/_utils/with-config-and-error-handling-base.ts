@@ -1,8 +1,8 @@
 // pattern: Imperative Shell
 
-import { withErrorHandling } from "../cli/utils/with-error-handling.js";
+import { withErrorHandling } from "./with-error-handling.js";
 
-import type { SettingsBase } from "../config/types/index.js";
+import type { SettingsBase } from "../../config/types/index.js";
 
 /**
  * Generic convenience function to wrap a Commander action with both config loading and error handling

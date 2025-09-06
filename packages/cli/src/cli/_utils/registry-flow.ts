@@ -4,13 +4,13 @@ import chalk from "chalk";
 import { DEFAULT_THEME, highlight } from "cli-highlight";
 import { stringify as yamlStringify } from "yaml";
 
-import { CLI_LOGGER } from "../cli/_deps.js";
-import { RegistryAdapterFactory } from "../cli/server/registry/factory.js";
+import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
+import { CLI_LOGGER } from "../_deps.js";
+import { RegistryAdapterFactory } from "../server/registry/factory.js";
 import {
   generateDefaultServerName,
   generateServerConfigFromRegistry,
-} from "../cli/server/registry-server-generator.js";
-import { forceQuoteVersionStrings } from "../utils/yaml-helpers.js";
+} from "../server/registry-server-generator.js";
 
 import { promptForConfirmationWithEscapeHandling } from "./navigation-prompts.js";
 import {
@@ -23,11 +23,8 @@ import {
   createRegistryServerAddStateMachine,
 } from "./state-machine.js";
 
-import type {
-  PackageInfo,
-  RegistryType,
-} from "../cli/server/registry/types.js";
-import type { SettingsProject } from "../config/types/index.js";
+import type { SettingsProject } from "../../config/types/index.js";
+import type { PackageInfo, RegistryType } from "../server/registry/types.js";
 
 /**
  * Data collected during the registry flow

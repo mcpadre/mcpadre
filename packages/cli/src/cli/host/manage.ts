@@ -2,17 +2,17 @@
 
 import { Command } from "@commander-js/extra-typings";
 
-import {
-  applyHostChanges,
-  getEnabledHostsDisplay,
-  promptMultiHostToggle,
-} from "../../cli-helpers/multi-host-toggle.js";
-import { withProjectConfigAndErrorHandling } from "../../cli-helpers/with-project-config-and-error-handling.js";
-import { withUserConfigAndErrorHandling } from "../../cli-helpers/with-user-config-and-error-handling.js";
 import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
 import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
 import { isUserMode } from "../_globals.js";
+import {
+  applyHostChanges,
+  getEnabledHostsDisplay,
+  promptMultiHostToggle,
+} from "../_utils/multi-host-toggle.js";
+import { withProjectConfigAndErrorHandling } from "../_utils/with-project-config-and-error-handling.js";
+import { withUserConfigAndErrorHandling } from "../_utils/with-user-config-and-error-handling.js";
 
 import type {
   SettingsProject,

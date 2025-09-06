@@ -1,10 +1,9 @@
 // pattern: Imperative Shell
 
-import { withProjectConfig } from "../cli/with-project-config.js";
-
 import { withConfigAndErrorHandlingBase } from "./with-config-and-error-handling-base.js";
+import { withProjectConfig } from "./with-project-config.js";
 
-import type { SettingsProject } from "../config/types/index.js";
+import type { SettingsProject } from "../../config/types/index.js";
 
 /**
  * Convenience function to wrap a Commander action with both project config loading and error handling

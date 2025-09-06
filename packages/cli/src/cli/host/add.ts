@@ -2,8 +2,8 @@
 
 import { Command } from "@commander-js/extra-typings";
 
-import { withConfigContextAndErrorHandling } from "../../cli-helpers/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "../_deps.js";
+import { withConfigContextAndErrorHandling } from "../_utils/with-config-context-and-error-handling.js";
 
 import {
   addHostToConfig,
@@ -16,7 +16,7 @@ import type {
   SettingsProject,
   SettingsUser,
 } from "../../config/types/index.js";
-import type { ConfigContext } from "../contexts/index.js";
+import type { ConfigContext } from "../_utils/contexts/index.js";
 
 /**
  * Creates the `host add` command for adding hosts to mcpadre configuration

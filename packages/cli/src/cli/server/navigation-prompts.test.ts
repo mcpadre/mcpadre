@@ -10,7 +10,7 @@ import {
   promptForConfirmationWithEscapeHandling,
   promptForConfirmationWithNavigation,
   promptForServerSelectionWithNavigation,
-} from "../../cli-helpers/navigation-prompts.js";
+} from "../_utils/navigation-prompts.js";
 
 describe("Navigation Prompts", () => {
   describe("promptForServerSelectionWithNavigation", () => {
