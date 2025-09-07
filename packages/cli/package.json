@@ -28,6 +28,14 @@
   ],
   "author": "Ed Ropple <ed+mcpadre@ed3d.net>",
   "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcpadre/mcpadre.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mcpadre/mcpadre/issues"
+  },
+  "homepage": "https://github.com/mcpadre/mcpadre",
   "devDependencies": {
     "@lydell/node-pty": "1.1.0",
     "@inquirer/testing": "2.1.49",
