@@ -164,19 +164,8 @@ jobs:
           VERSION=${TAG#v}
           echo "Version: $VERSION"
 
-          # Install semver package for validation
-          npm install semver
-
-          # Validate semver format using Node.js semver package
-          if node -e "
-            const semver = require('semver');
-            const version = '$VERSION';
-            if (!semver.valid(version)) {
-              console.error('Invalid semver version:', version);
-              process.exit(1);
-            }
-            console.log('Valid semver version:', version);
-          "; then
+          # Validate semver format using regex pattern
+          if echo "$VERSION" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9][a-zA-Z0-9\.-]*)?(\+[a-zA-Z0-9][a-zA-Z0-9\.-]*)?$'; then
             echo "valid=true" >> $GITHUB_OUTPUT
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "tag=$TAG" >> $GITHUB_OUTPUT
