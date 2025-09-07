@@ -164,6 +164,9 @@ jobs:
           VERSION=${TAG#v}
           echo "Version: $VERSION"
 
+          # Install semver package for validation
+          npm install semver
+
           # Validate semver format using Node.js semver package
           if node -e "
             const semver = require('semver');
