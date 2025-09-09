@@ -217,8 +217,9 @@ export const confirmWithEscapeHandling = createPrompt<
   boolean,
   { message: string; default?: boolean; canGoBack?: boolean }
 >((config, done) => {
-  const [status, setStatus] = useState<"idle" | "done">("idle");
-  const [value, setValue] = useState(config.default ?? false);
+  const [status, setStatus] = useState<"idle" | "done" | "escaped">("idle");
+  const [value, setValue] = useState<boolean | undefined>(config.default);
+  const [hasUserInput, setHasUserInput] = useState(false);
 
   const canGoBack = config.canGoBack ?? false;
   const escapeHint = canGoBack
@@ -227,30 +228,39 @@ export const confirmWithEscapeHandling = createPrompt<
 
   useKeypress(key => {
     if (isEnterKey(key)) {
-      setStatus("done");
-      done(value);
+      // Only allow enter if user has made a choice (y or n)
+      if (hasUserInput && value !== undefined) {
+        setStatus("done");
+        done(value);
+      }
+      // Otherwise ignore enter - user must press y or n
     } else if (key.name === "escape") {
-      setStatus("done");
-      // Throw a NavigationError that we can catch with instanceof
-      const action = canGoBack ? "back" : "exit";
-      throw new NavigationError(action);
+      setStatus("escaped");
+      // Don't call done(), let the main logic handle it
     } else if (key.name === "y") {
       setValue(true);
+      setHasUserInput(true);
+      setStatus("done");
+      done(true);
     } else if (key.name === "n") {
       setValue(false);
+      setHasUserInput(true);
+      setStatus("done");
+      done(false);
     }
   });
 
-  const prefix = status === "done" ? "✔" : "?";
-  const answer = status === "done" ? (value ? "yes" : "no") : "";
-  const defaultValue =
-    config.default !== undefined
-      ? config.default
-        ? " (Y/n)"
-        : " (y/N)"
-      : " (y/n)";
+  // Handle escape state outside of keypress callback
+  if (status === "escaped") {
+    const action = canGoBack ? "back" : "exit";
+    throw new NavigationError(action);
+  }
 
-  let message = `${prefix} ${config.message}${status === "idle" ? defaultValue : ""} ${answer}`;
+  const prefix = status === "done" ? "✔" : "?";
+  const answer =
+    status === "done" && value !== undefined ? (value ? "yes" : "no") : "";
+
+  let message = `${prefix} ${config.message} (y/n) ${answer}`;
 
   if (status === "idle") {
     message += `\n  ${escapeHint}`;
@@ -282,6 +292,133 @@ export async function promptForConfirmationWithEscapeHandling(
     return {
       action: "continue",
       value: confirmed,
+    };
+  } catch (error) {
+    // Handle our custom navigation errors
+    if (error instanceof NavigationError) {
+      return { action: error.action };
+    }
+
+    // Handle Inquirer cancellation (Ctrl+C)
+    if (
+      error instanceof Error &&
+      (error.message.includes("User force closed the prompt") ||
+        error.message.includes("force closed"))
+    ) {
+      return { action: "exit" };
+    }
+
+    // Re-throw other errors
+    throw error;
+  }
+}
+
+/**
+ * Simple select prompt that can detect escape key vs Ctrl+C
+ * Following the pattern of promptForServerSelectionWithNavigation
+ */
+const selectWithEscape = createPrompt<
+  string,
+  {
+    message: string;
+    choices: { value: string; name: string }[];
+    pageSize?: number;
+  }
+>((config, done) => {
+  const [status, setStatus] = useState<"idle" | "done" | "escaped">("idle");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const pageSize = config.pageSize ?? 10;
+
+  useKeypress(key => {
+    if (isEnterKey(key)) {
+      const selectedChoice = config.choices[activeIndex];
+      if (selectedChoice) {
+        setStatus("done");
+        done(selectedChoice.value);
+      }
+    } else if (key.name === "escape") {
+      setStatus("escaped");
+      // Don't call done(), let the main logic handle it
+    } else if (key.name === "up" || key.name === "k") {
+      const newIndex =
+        activeIndex > 0 ? activeIndex - 1 : config.choices.length - 1;
+      setActiveIndex(newIndex);
+    } else if (key.name === "down" || key.name === "j") {
+      const newIndex =
+        activeIndex < config.choices.length - 1 ? activeIndex + 1 : 0;
+      setActiveIndex(newIndex);
+    }
+  });
+
+  // Handle escape state outside of keypress callback
+  if (status === "escaped") {
+    throw new NavigationError("back");
+  }
+
+  const prefix = status === "done" ? "✔" : "?";
+  let message = `${prefix} ${config.message}`;
+
+  if (status === "idle") {
+    message += `\n  (Use arrow keys, <enter> to confirm, <esc> to go back, <ctrl+c> to cancel)`;
+
+    // Show choices with pagination
+    const startIndex = Math.max(
+      0,
+      Math.min(
+        activeIndex - Math.floor(pageSize / 2),
+        config.choices.length - pageSize
+      )
+    );
+    const endIndex = Math.min(config.choices.length, startIndex + pageSize);
+
+    for (let i = startIndex; i < endIndex; i++) {
+      const choice = config.choices[i];
+      if (choice) {
+        const isActive = i === activeIndex;
+        const prefix = isActive ? "❯" : " ";
+        message += `\n${prefix} ${choice.name}`;
+      }
+    }
+
+    // Show pagination indicators if needed
+    if (config.choices.length > pageSize) {
+      message += `\n  (${Math.min(endIndex, config.choices.length)} of ${config.choices.length})`;
+    }
+  } else {
+    const selectedChoice = config.choices[activeIndex];
+    message += ` ${selectedChoice?.name ?? ""}`;
+  }
+
+  return message;
+});
+
+/**
+ * Enhanced select prompt with escape navigation
+ */
+export async function selectWithNavigationResult<T extends string>(
+  message: string,
+  choices: { value: T; name: string }[],
+  options?: { pageSize?: number }
+): Promise<NavigationResult<T>> {
+  try {
+    const config: {
+      message: string;
+      choices: { value: string; name: string }[];
+      pageSize?: number;
+    } = {
+      message,
+      choices,
+    };
+
+    if (options?.pageSize !== undefined) {
+      config.pageSize = options.pageSize;
+    }
+
+    const result = await selectWithEscape(config);
+
+    return {
+      action: "continue",
+      value: result as T,
     };
   } catch (error) {
     // Handle our custom navigation errors
