@@ -1,8 +1,10 @@
 // pattern: Test
 import { describe, expect, it } from "vitest";
 
+import { DockerHubRegistryAdapter } from "./docker-adapter.js";
 import { RegistryAdapterFactory } from "./factory.js";
 import { NpmRegistryAdapter } from "./npm-adapter.js";
+import { PypiRegistryAdapter } from "./pypi-adapter.js";
 
 describe("RegistryAdapterFactory", () => {
   describe("createAdapter", () => {
@@ -13,16 +15,18 @@ describe("RegistryAdapterFactory", () => {
       expect(adapter.config.displayName).toBe("NPM Registry");
     });
 
-    it("should throw error for unimplemented python type", () => {
-      expect(() => {
-        RegistryAdapterFactory.createAdapter("python");
-      }).toThrow("Python registry adapter not yet implemented");
+    it("should create PyPI adapter for python type", () => {
+      const adapter = RegistryAdapterFactory.createAdapter("python");
+      expect(adapter).toBeInstanceOf(PypiRegistryAdapter);
+      expect(adapter.config.type).toBe("python");
+      expect(adapter.config.displayName).toBe("PyPI Registry");
     });
 
-    it("should throw error for unimplemented container type", () => {
-      expect(() => {
-        RegistryAdapterFactory.createAdapter("container");
-      }).toThrow("Container registry adapter not yet implemented");
+    it("should create Docker Hub adapter for container type", () => {
+      const adapter = RegistryAdapterFactory.createAdapter("container");
+      expect(adapter).toBeInstanceOf(DockerHubRegistryAdapter);
+      expect(adapter.config.type).toBe("container");
+      expect(adapter.config.displayName).toBe("Docker Hub Registry");
     });
 
     it("should throw error for unsupported type", () => {
@@ -38,11 +42,11 @@ describe("RegistryAdapterFactory", () => {
 
       expect(registries).toEqual([
         { type: "node", displayName: "Node.js (NPM)", implemented: true },
-        { type: "python", displayName: "Python (PyPI)", implemented: false },
+        { type: "python", displayName: "Python (PyPI)", implemented: true },
         {
           type: "container",
           displayName: "Container (Docker)",
-          implemented: false,
+          implemented: true,
         },
       ]);
     });
@@ -54,15 +58,18 @@ describe("RegistryAdapterFactory", () => {
 
       expect(available).toEqual([
         { type: "node", displayName: "Node.js (NPM)" },
+        { type: "python", displayName: "Python (PyPI)" },
+        { type: "container", displayName: "Container (Docker)" },
       ]);
     });
 
-    it("should not include unimplemented registries", () => {
+    it("should include all implemented registries", () => {
       const available = RegistryAdapterFactory.getAvailableRegistries();
       const types = available.map(r => r.type);
 
-      expect(types).not.toContain("python");
-      expect(types).not.toContain("container");
+      expect(types).toContain("node");
+      expect(types).toContain("python");
+      expect(types).toContain("container");
     });
   });
 });
