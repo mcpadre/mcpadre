@@ -305,7 +305,285 @@ describe("server-detector", () => {
       await rm(tempDir, { recursive: true, force: true });
     });
 
-    it("identifies orphaned directories", async () => {
+    describe("project mode (isUserMode: false)", () => {
+      it("identifies orphaned directories in .mcpadre/servers", async () => {
+        // Create .mcpadre/servers directory structure
+        const serversDir = join(tempDir, ".mcpadre", "servers");
+        await mkdir(serversDir, { recursive: true });
+
+        // Create some server directories
+        await mkdir(join(serversDir, "current-server"));
+        await mkdir(join(serversDir, "orphaned-server1"));
+        await mkdir(join(serversDir, "orphaned-server2"));
+
+        // Add some files to make them real directories
+        await writeFile(
+          join(serversDir, "current-server", "package.json"),
+          "{}"
+        );
+        await writeFile(
+          join(serversDir, "orphaned-server1", "package.json"),
+          "{}"
+        );
+        await writeFile(
+          join(serversDir, "orphaned-server2", "requirements.txt"),
+          ""
+        );
+
+        const mcpadreServerNames = new Set(["current-server"]);
+
+        const result = await analyzeServerDirectories(
+          tempDir,
+          mcpadreServerNames,
+          false // isUserMode: false (project mode)
+        );
+
+        expect(result.orphanedDirectories).toEqual(
+          expect.arrayContaining(["orphaned-server1", "orphaned-server2"])
+        );
+        expect(result.orphanedDirectories).toHaveLength(2);
+      });
+
+      it("handles missing .mcpadre/servers directory", async () => {
+        const result = await analyzeServerDirectories(
+          tempDir,
+          new Set(["some-server"]),
+          false // isUserMode: false (project mode)
+        );
+
+        expect(result.orphanedDirectories).toEqual([]);
+      });
+
+      it("handles empty .mcpadre/servers directory", async () => {
+        const serversDir = join(tempDir, ".mcpadre", "servers");
+        await mkdir(serversDir, { recursive: true });
+
+        const result = await analyzeServerDirectories(
+          tempDir,
+          new Set(["some-server"]),
+          false // isUserMode: false (project mode)
+        );
+
+        expect(result.orphanedDirectories).toEqual([]);
+      });
+
+      it("only reports directories, not files in .mcpadre/servers", async () => {
+        const serversDir = join(tempDir, ".mcpadre", "servers");
+        await mkdir(serversDir, { recursive: true });
+
+        // Create a file in the servers directory (should be ignored)
+        await writeFile(join(serversDir, "not-a-directory.txt"), "content");
+
+        // Create a directory that should be reported as orphaned
+        await mkdir(join(serversDir, "orphaned-directory"));
+
+        const result = await analyzeServerDirectories(
+          tempDir,
+          new Set(),
+          false // isUserMode: false (project mode)
+        );
+
+        expect(result.orphanedDirectories).toEqual(["orphaned-directory"]);
+      });
+    });
+
+    describe("user mode (isUserMode: true)", () => {
+      it("analyzes servers/ directory when isUserMode=true", async () => {
+        // Create servers directory structure (user mode)
+        const userServersDir = join(tempDir, "servers");
+        await mkdir(userServersDir, { recursive: true });
+
+        // Create server directories in user mode location
+        await mkdir(join(userServersDir, "user-current-server"));
+        await mkdir(join(userServersDir, "user-orphaned-server1"));
+        await mkdir(join(userServersDir, "user-orphaned-server2"));
+
+        // Add files to make them real directories
+        await writeFile(
+          join(userServersDir, "user-current-server", "package.json"),
+          "{}"
+        );
+        await writeFile(
+          join(userServersDir, "user-orphaned-server1", "package.json"),
+          "{}"
+        );
+        await writeFile(
+          join(userServersDir, "user-orphaned-server2", "requirements.txt"),
+          ""
+        );
+
+        const mcpadreServerNames = new Set(["user-current-server"]);
+
+        const result = await analyzeServerDirectories(
+          tempDir,
+          mcpadreServerNames,
+          true // isUserMode: true (user mode)
+        );
+
+        expect(result.orphanedDirectories).toEqual(
+          expect.arrayContaining([
+            "user-orphaned-server1",
+            "user-orphaned-server2",
+          ])
+        );
+        expect(result.orphanedDirectories).toHaveLength(2);
+      });
+
+      it("finds orphaned directories in userDir/servers/", async () => {
+        // Create user mode servers directory with orphaned content
+        const userServersDir = join(tempDir, "servers");
+        await mkdir(userServersDir, { recursive: true });
+
+        await mkdir(join(userServersDir, "orphan-alpha"));
+        await mkdir(join(userServersDir, "orphan-beta"));
+        await writeFile(
+          join(userServersDir, "orphan-alpha", "config.json"),
+          "{}"
+        );
+        await writeFile(join(userServersDir, "orphan-beta", "setup.py"), "");
+
+        // Empty server names set - all should be orphans
+        const result = await analyzeServerDirectories(
+          tempDir,
+          new Set(),
+          true // isUserMode: true
+        );
+
+        expect(result.orphanedDirectories).toEqual(
+          expect.arrayContaining(["orphan-alpha", "orphan-beta"])
+        );
+        expect(result.orphanedDirectories).toHaveLength(2);
+      });
+
+      it("handles missing userDir/servers/ gracefully", async () => {
+        // Don't create the servers directory at all
+        const result = await analyzeServerDirectories(
+          tempDir,
+          new Set(["some-server"]),
+          true // isUserMode: true
+        );
+
+        expect(result.orphanedDirectories).toEqual([]);
+      });
+
+      it("should not look in .mcpadre/servers when isUserMode=true", async () => {
+        // Create both project and user mode directories with different content
+        const projectServersDir = join(tempDir, ".mcpadre", "servers");
+        const userServersDir = join(tempDir, "servers");
+        await mkdir(projectServersDir, { recursive: true });
+        await mkdir(userServersDir, { recursive: true });
+
+        // Add orphaned server to project mode directory
+        await mkdir(join(projectServersDir, "project-orphan"));
+        await writeFile(
+          join(projectServersDir, "project-orphan", "package.json"),
+          "{}"
+        );
+
+        // Add orphaned server to user mode directory
+        await mkdir(join(userServersDir, "user-orphan"));
+        await writeFile(
+          join(userServersDir, "user-orphan", "package.json"),
+          "{}"
+        );
+
+        const result = await analyzeServerDirectories(
+          tempDir,
+          new Set(), // No current servers
+          true // isUserMode: true - should only look in servers/, not .mcpadre/servers/
+        );
+
+        // Should only find the user mode orphan, not the project mode orphan
+        expect(result.orphanedDirectories).toEqual(["user-orphan"]);
+        expect(result.orphanedDirectories).not.toContain("project-orphan");
+      });
+    });
+
+    describe("mode comparison", () => {
+      it("should find different orphans in project vs user modes", async () => {
+        // Create both directory structures with different orphans
+        const projectServersDir = join(tempDir, ".mcpadre", "servers");
+        const userServersDir = join(tempDir, "servers");
+        await mkdir(projectServersDir, { recursive: true });
+        await mkdir(userServersDir, { recursive: true });
+
+        // Project mode orphans
+        await mkdir(join(projectServersDir, "project-server-orphan"));
+        await writeFile(
+          join(projectServersDir, "project-server-orphan", "package.json"),
+          "{}"
+        );
+
+        // User mode orphans
+        await mkdir(join(userServersDir, "user-server-orphan"));
+        await writeFile(
+          join(userServersDir, "user-server-orphan", "requirements.txt"),
+          ""
+        );
+
+        // Test project mode
+        const projectResult = await analyzeServerDirectories(
+          tempDir,
+          new Set(),
+          false // isUserMode: false
+        );
+
+        // Test user mode
+        const userResult = await analyzeServerDirectories(
+          tempDir,
+          new Set(),
+          true // isUserMode: true
+        );
+
+        expect(projectResult.orphanedDirectories).toEqual([
+          "project-server-orphan",
+        ]);
+        expect(userResult.orphanedDirectories).toEqual(["user-server-orphan"]);
+        expect(projectResult.orphanedDirectories).not.toEqual(
+          userResult.orphanedDirectories
+        );
+      });
+
+      it("should handle same directory with different mode settings", async () => {
+        // Create overlapping server names in both locations
+        const projectServersDir = join(tempDir, ".mcpadre", "servers");
+        const userServersDir = join(tempDir, "servers");
+        await mkdir(projectServersDir, { recursive: true });
+        await mkdir(userServersDir, { recursive: true });
+
+        // Same server name in both locations
+        await mkdir(join(projectServersDir, "same-server"));
+        await mkdir(join(userServersDir, "same-server"));
+        await writeFile(
+          join(projectServersDir, "same-server", "package.json"),
+          "{}"
+        );
+        await writeFile(
+          join(userServersDir, "same-server", "requirements.txt"),
+          ""
+        );
+
+        const currentServers = new Set(["same-server"]);
+
+        // Test both modes - neither should report "same-server" as orphaned
+        const projectResult = await analyzeServerDirectories(
+          tempDir,
+          currentServers,
+          false
+        );
+        const userResult = await analyzeServerDirectories(
+          tempDir,
+          currentServers,
+          true
+        );
+
+        expect(projectResult.orphanedDirectories).toEqual([]);
+        expect(userResult.orphanedDirectories).toEqual([]);
+      });
+    });
+
+    // Keep backward compatibility test (default isUserMode parameter)
+    it("identifies orphaned directories (backward compatibility)", async () => {
       // Create .mcpadre/servers directory structure
       const serversDir = join(tempDir, ".mcpadre", "servers");
       await mkdir(serversDir, { recursive: true });
@@ -328,6 +606,7 @@ describe("server-detector", () => {
 
       const mcpadreServerNames = new Set(["current-server"]);
 
+      // Call without isUserMode parameter (should default to false)
       const result = await analyzeServerDirectories(
         tempDir,
         mcpadreServerNames
@@ -337,42 +616,6 @@ describe("server-detector", () => {
         expect.arrayContaining(["orphaned-server1", "orphaned-server2"])
       );
       expect(result.orphanedDirectories).toHaveLength(2);
-    });
-
-    it("handles missing .mcpadre/servers directory", async () => {
-      const result = await analyzeServerDirectories(
-        tempDir,
-        new Set(["some-server"])
-      );
-
-      expect(result.orphanedDirectories).toEqual([]);
-    });
-
-    it("handles empty servers directory", async () => {
-      const serversDir = join(tempDir, ".mcpadre", "servers");
-      await mkdir(serversDir, { recursive: true });
-
-      const result = await analyzeServerDirectories(
-        tempDir,
-        new Set(["some-server"])
-      );
-
-      expect(result.orphanedDirectories).toEqual([]);
-    });
-
-    it("only reports directories, not files", async () => {
-      const serversDir = join(tempDir, ".mcpadre", "servers");
-      await mkdir(serversDir, { recursive: true });
-
-      // Create a file in the servers directory (should be ignored)
-      await writeFile(join(serversDir, "not-a-directory.txt"), "content");
-
-      // Create a directory that should be reported as orphaned
-      await mkdir(join(serversDir, "orphaned-directory"));
-
-      const result = await analyzeServerDirectories(tempDir, new Set());
-
-      expect(result.orphanedDirectories).toEqual(["orphaned-directory"]);
     });
   });
 });

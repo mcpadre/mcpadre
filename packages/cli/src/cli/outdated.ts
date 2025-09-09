@@ -164,7 +164,8 @@ async function runOutdatedLogic(
       workingDir,
       docker,
       CLI_LOGGER,
-      checkOptions
+      checkOptions,
+      mode
     );
 
     // Apply filtering if requested
