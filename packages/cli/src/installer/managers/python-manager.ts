@@ -27,7 +27,7 @@ export interface PythonInstallOptions {
   python: PythonOptionsV1;
   /** Base directory where .mcpadre is located */
   projectDir: string;
-  /** Server directory path (.mcpadre/servers/$serverName) */
+  /** Server directory path (project: .mcpadre/servers/$serverName, user: servers/$serverName) */
   serverDir: string;
   /** Logger instance */
   logger: Logger;
