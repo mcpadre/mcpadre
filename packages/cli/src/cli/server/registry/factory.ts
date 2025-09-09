@@ -1,6 +1,8 @@
 // pattern: Functional Core
 
+import { DockerHubRegistryAdapter } from "./docker-adapter.js";
 import { NpmRegistryAdapter } from "./npm-adapter.js";
+import { PypiRegistryAdapter } from "./pypi-adapter.js";
 
 import type { RegistryAdapter, RegistryType } from "./types.js";
 
@@ -18,10 +20,10 @@ export class RegistryAdapterFactory {
         return new NpmRegistryAdapter();
 
       case "python":
-        throw new Error("Python registry adapter not yet implemented");
+        return new PypiRegistryAdapter();
 
       case "container":
-        throw new Error("Container registry adapter not yet implemented");
+        return new DockerHubRegistryAdapter();
 
       default:
         throw new Error(`Unsupported registry type: ${type}`);
@@ -38,11 +40,11 @@ export class RegistryAdapterFactory {
   }[] {
     return [
       { type: "node", displayName: "Node.js (NPM)", implemented: true },
-      { type: "python", displayName: "Python (PyPI)", implemented: false },
+      { type: "python", displayName: "Python (PyPI)", implemented: true },
       {
         type: "container",
         displayName: "Container (Docker)",
-        implemented: false,
+        implemented: true,
       },
     ];
   }

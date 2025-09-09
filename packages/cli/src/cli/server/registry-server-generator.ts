@@ -1,6 +1,10 @@
 // pattern: Functional Core
 
-import type { NodeMcpServer } from "../../config/types/index.js";
+import type {
+  ContainerMcpServer,
+  NodeMcpServer,
+  PythonMcpServer,
+} from "../../config/types/index.js";
 import type { RegistryType } from "./registry/types.js";
 
 /**
@@ -24,7 +28,7 @@ export interface ServerGenerationResult {
   /** Server name */
   serverName: string;
   /** Generated server configuration */
-  serverConfig: NodeMcpServer;
+  serverConfig: NodeMcpServer | PythonMcpServer | ContainerMcpServer;
 }
 
 /**
@@ -38,10 +42,10 @@ export function generateServerConfigFromRegistry(
       return generateNodeServerConfig(data);
 
     case "python":
-      throw new Error("Python server generation not yet implemented");
+      return generatePythonServerConfig(data);
 
     case "container":
-      throw new Error("Container server generation not yet implemented");
+      return generateContainerServerConfig(data);
 
     default:
       throw new Error(`Unsupported registry type: ${data.registryType}`);
@@ -64,6 +68,44 @@ function generateNodeServerConfig(
   return {
     serverName: data.serverName,
     serverConfig: nodeConfig,
+  };
+}
+
+/**
+ * Generate Python MCP server configuration
+ */
+function generatePythonServerConfig(
+  data: RegistryServerData
+): ServerGenerationResult {
+  const pythonConfig: PythonMcpServer = {
+    python: {
+      package: data.packageName,
+      version: data.version,
+    },
+  };
+
+  return {
+    serverName: data.serverName,
+    serverConfig: pythonConfig,
+  };
+}
+
+/**
+ * Generate Container MCP server configuration
+ */
+function generateContainerServerConfig(
+  data: RegistryServerData
+): ServerGenerationResult {
+  const containerConfig: ContainerMcpServer = {
+    container: {
+      image: data.packageName,
+      tag: data.version,
+    },
+  };
+
+  return {
+    serverName: data.serverName,
+    serverConfig: containerConfig,
   };
 }
 
