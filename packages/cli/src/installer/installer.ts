@@ -325,7 +325,8 @@ export async function installForHost(
   // Analyze server directories on disk
   const directoryAnalysis = await analyzeServerDirectories(
     projectDir,
-    new Set(Object.keys(config.mcpServers))
+    new Set(Object.keys(config.mcpServers)),
+    false // Project mode
   );
 
   // Log external servers (INFO level)
@@ -607,6 +608,7 @@ export async function installForUserHost(
             container: serverConfig.container,
             projectDir: userDir, // Use user directory as project directory
             logger,
+            isUserMode: true, // Enable user mode for container manager
           });
 
           if (installResult.imagePulled) {
@@ -733,7 +735,8 @@ export async function installForUserHost(
   // Analyze server directories on disk (in user directory)
   const directoryAnalysis = await analyzeServerDirectories(
     userDir,
-    new Set(Object.keys(config.mcpServers))
+    new Set(Object.keys(config.mcpServers)),
+    true // User mode
   );
 
   // Log external servers (INFO level)

@@ -202,19 +202,23 @@ export function classifyServers(
 /**
  * Analyzes server directories on disk to find orphaned directories
  *
- * @param projectDir Absolute path to the project directory
+ * @param projectDir Absolute path to the project directory (or user directory in user mode)
  * @param mcpadreServerNames Set of server names currently defined in mcpadre.yaml
+ * @param isUserMode Whether this is for user-level configuration
  * @returns Analysis of server directories
  */
 export async function analyzeServerDirectories(
   projectDir: string,
-  mcpadreServerNames: Set<string>
+  mcpadreServerNames: Set<string>,
+  isUserMode = false
 ): Promise<ServerDirectoryAnalysis> {
   const result: ServerDirectoryAnalysis = {
     orphanedDirectories: [],
   };
 
-  const serversDir = join(projectDir, ".mcpadre", "servers");
+  const serversDir = isUserMode
+    ? join(projectDir, "servers")
+    : join(projectDir, ".mcpadre", "servers");
 
   try {
     const entries = await readdir(serversDir, { withFileTypes: true });
@@ -225,7 +229,7 @@ export async function analyzeServerDirectories(
       }
     }
   } catch (error) {
-    // If .mcpadre/servers doesn't exist or can't be read, that's fine
+    // If servers directory doesn't exist or can't be read, that's fine
     // Just return empty analysis
     if (error instanceof Error && "code" in error && error.code !== "ENOENT") {
       // Re-throw non-ENOENT errors (permission issues, etc.)
