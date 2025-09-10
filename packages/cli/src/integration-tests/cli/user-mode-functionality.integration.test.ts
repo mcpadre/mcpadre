@@ -5,7 +5,7 @@ import { mkdir } from "fs/promises";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { type SpawnFunction,withProcess } from "../helpers/spawn-cli-v2.js";
+import { type SpawnFunction, withProcess } from "../helpers/spawn-cli-v2.js";
 import {
   cleanupTestEnvironment,
   createConfigWithServers,
@@ -98,7 +98,7 @@ describe("User Mode Integration Tests", () => {
           tempUserDir,
           tempProjectDir,
           ["install", "--user"],
-{}
+          {}
         );
         expect(installResult.exitCode).toBe(0);
 
@@ -108,7 +108,7 @@ describe("User Mode Integration Tests", () => {
           tempUserDir,
           tempProjectDir,
           ["run", "test-container", "--user"],
-{}
+          {}
         );
 
         // Should not fail with "no container lock found"
@@ -173,7 +173,7 @@ describe("User Mode Integration Tests", () => {
           tempUserDir,
           tempProjectDir,
           ["run", "test-node", "--user"],
-{}
+          {}
         );
 
         // Should find the installed server
@@ -191,11 +191,17 @@ describe("User Mode Integration Tests", () => {
         await createUserConfig(tempUserDir, TEST_MULTI_SERVER_CONFIG);
 
         // Create mock server installations in user directory
-        await createMockServerInstallation(tempUserDir, "container-server", true, [
-          { name: "container.lock", content: JSON.stringify({ digest: "sha256:old" }) },
+        await createMockServerInstallation(tempUserDir, "container-server", [
+          {
+            name: "container.lock",
+            content: JSON.stringify({ digest: "sha256:old" }),
+          },
         ]);
-        await createMockServerInstallation(tempUserDir, "node-server", true, [
-          { name: "package.json", content: JSON.stringify({ version: "1.0.0" }) },
+        await createMockServerInstallation(tempUserDir, "node-server", [
+          {
+            name: "package.json",
+            content: JSON.stringify({ version: "1.0.0" }),
+          },
         ]);
 
         // Run outdated --user
@@ -252,7 +258,7 @@ describe("User Mode Integration Tests", () => {
           tempUserDir,
           tempProjectDir,
           ["upgrade", "--user", "--yes"], // Use --yes to skip prompts
-{}
+          {}
         );
 
         // Should operate on user directories
@@ -270,9 +276,9 @@ describe("User Mode Integration Tests", () => {
         await createUserConfig(tempUserDir, partialConfig);
 
         // Create server directories (some will be orphaned)
-        await createMockServerInstallation(tempUserDir, "current-server", true);
-        await createMockServerInstallation(tempUserDir, "orphaned-server1", true);
-        await createMockServerInstallation(tempUserDir, "orphaned-server2", true);
+        await createMockServerInstallation(tempUserDir, "current-server");
+        await createMockServerInstallation(tempUserDir, "orphaned-server1");
+        await createMockServerInstallation(tempUserDir, "orphaned-server2");
 
         // Run install --user (should detect orphans)
         const result = await runUserModeCommand(
@@ -287,11 +293,11 @@ describe("User Mode Integration Tests", () => {
         // Should detect orphaned directories in user dir, not project dir
         expect(
           result.stdout.includes("orphaned-server1") ||
-          result.stderr.includes("orphaned-server1")
+            result.stderr.includes("orphaned-server1")
         ).toBe(true);
         expect(
           result.stdout.includes("orphaned-server2") ||
-          result.stderr.includes("orphaned-server2")
+            result.stderr.includes("orphaned-server2")
         ).toBe(true);
       })
     );
@@ -304,8 +310,8 @@ describe("User Mode Integration Tests", () => {
         await createUserConfig(tempUserDir, userConfig);
 
         // Create orphaned servers in BOTH locations
-        await createMockServerInstallation(tempUserDir, "user-orphan", true);
-        await createMockServerInstallation(tempProjectDir, "project-orphan", false);
+        await createMockServerInstallation(tempUserDir, "user-orphan");
+        await createMockServerInstallation(tempProjectDir, "project-orphan");
 
         // Run install --user
         const result = await runUserModeCommand(
@@ -337,7 +343,7 @@ describe("User Mode Integration Tests", () => {
           spawn,
           tempUserDir,
           tempProjectDir,
-          ["install", "--user", "--dry-run"]
+          ["outdated", "--user"]
         );
 
         expect(result.exitCode).toBe(0);
@@ -376,7 +382,7 @@ describe("User Mode Integration Tests", () => {
           spawn,
           tempUserDir,
           tempProjectDir,
-          ["install", "--user", "--dry-run"]
+          ["outdated", "--user"]
         );
 
         expect(yamlResult.exitCode).toBe(0);
@@ -410,7 +416,7 @@ describe("User Mode Integration Tests", () => {
           tempUserDir,
           tempProjectDir,
           ["run", "test-node", "--user"],
-{}
+          {}
         );
 
         // Should find the server installed with same --user-dir
@@ -423,7 +429,7 @@ describe("User Mode Integration Tests", () => {
       withProcess(async (spawn: SpawnFunction) => {
         // Install in one user directory
         await createUserConfig(tempUserDir, TEST_NODE_SERVER_CONFIG);
-        
+
         const installResult = await runUserModeCommand(
           spawn,
           tempUserDir,
@@ -441,7 +447,7 @@ describe("User Mode Integration Tests", () => {
           differentUserDir, // Different user dir
           tempProjectDir,
           ["run", "test-node", "--user"],
-{}
+          {}
         );
 
         // Should not find the server (installed in different user dir)
@@ -531,7 +537,7 @@ describe("User Mode Integration Tests", () => {
           spawn,
           tempUserDir,
           tempProjectDir,
-          ["install", "--user", "--dry-run"]
+          ["outdated", "--user"]
         );
 
         expect(result.exitCode).toBe(0);

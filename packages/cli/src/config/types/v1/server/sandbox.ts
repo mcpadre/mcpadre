@@ -17,9 +17,9 @@ export const SandboxOptionsV1 = Type.Object({
       "If true, omits default read-only access to system paths (/bin, /usr/lib, etc.) from the sandbox.",
     default: true,
   }),
-  omitProjectPath: Type.Boolean({
+  omitWorkspacePath: Type.Boolean({
     description:
-      "If true, omits read-only access to the project path from the sandbox.",
+      "If true, omits read-only access to the workspace path from the sandbox.",
     default: true,
   }),
   allowRead: Type.Optional(
@@ -31,7 +31,7 @@ export const SandboxOptionsV1 = Type.Object({
   allowReadWrite: Type.Optional(
     Type.Array(PathStringTemplate, {
       description:
-        "The set of paths that this MCP server can read+write+execute. If omitProjectPath is true, this will have the project path appended.",
+        "The set of paths that this MCP server can read+write+execute. If omitWorkspacePath is true, this will have the workspace path appended.",
     })
   ),
 });

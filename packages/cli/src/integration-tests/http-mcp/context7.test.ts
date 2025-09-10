@@ -14,8 +14,27 @@ import { HttpMcpClient } from "../../runner/servers/http/client.js";
 import type {
   EnvStringTemplate,
   HttpMcpServer,
+  WorkspaceContext,
 } from "../../config/types/index.js";
 import type { JsonRpcRequest } from "../../test-utils/json-rpc/types.js";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    mergedConfig: config,
+    projectConfig: config,
+    userConfig: undefined,
+  };
+}
 
 describe("HTTP MCP Client Integration with Context7", () => {
   let testDir: string;
@@ -49,7 +68,9 @@ describe("HTTP MCP Client Integration with Context7", () => {
       };
 
       // Create directory resolver and env resolver for headers
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const resolvedEnv = await resolveEnvVars({
         directoryResolver,
         parentEnv: {},
@@ -109,7 +130,9 @@ describe("HTTP MCP Client Integration with Context7", () => {
         },
       };
 
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const resolvedEnv = await resolveEnvVars({
         directoryResolver,
         parentEnv: {},
@@ -160,7 +183,9 @@ describe("HTTP MCP Client Integration with Context7", () => {
         },
       };
 
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const resolvedEnv = await resolveEnvVars({
         directoryResolver,
         parentEnv: {},
@@ -224,7 +249,9 @@ describe("HTTP MCP Client Integration with Context7", () => {
         },
       };
 
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const resolvedEnv = await resolveEnvVars({
         directoryResolver,
         parentEnv: {},
@@ -298,7 +325,9 @@ describe("HTTP MCP Client Integration with Context7", () => {
         },
       };
 
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const resolvedEnv = await resolveEnvVars({
         directoryResolver,
         parentEnv: { TEST_VAR: "from-env" },

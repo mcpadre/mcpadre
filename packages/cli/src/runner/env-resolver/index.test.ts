@@ -9,7 +9,29 @@ import { createDirectoryResolver } from "../directory-resolver/index.js";
 
 import { resolveEnvVars } from "./index.js";
 
-import type { EnvStringTemplate, EnvValue } from "../../config/types/index.js";
+import type {
+  EnvStringTemplate,
+  EnvValue,
+  WorkspaceContext,
+} from "../../config/types/index.js";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    mergedConfig: config,
+    projectConfig: config,
+    userConfig: undefined,
+  };
+}
 
 describe("resolveEnvVars", () => {
   let testDir: string;
@@ -34,7 +56,9 @@ describe("resolveEnvVars", () => {
 
   describe("EnvStringTemplate processing", () => {
     it("should resolve plain string templates", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = { TEST_VAR: "test-value" };
       const envConfig: Record<string, EnvValue> = {
         SIMPLE: "hello {{parentEnv.TEST_VAR}}" as EnvStringTemplate,
@@ -55,7 +79,9 @@ describe("resolveEnvVars", () => {
 
   describe("EnvStringObject processing", () => {
     it("should resolve string object templates", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = { CONFIG_PATH: "/app/config" };
       const envConfig: Record<string, EnvValue> = {
         CONFIG_FILE: {
@@ -76,7 +102,9 @@ describe("resolveEnvVars", () => {
 
   describe("EnvSpecialDirectory processing", () => {
     it("should resolve workspace special directory", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {};
       const envConfig: Record<string, EnvValue> = {
         WORKSPACE_PATH: {
@@ -95,7 +123,9 @@ describe("resolveEnvVars", () => {
     });
 
     it("should resolve all special directory types", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {};
       const envConfig: Record<string, EnvValue> = {
         HOME_DIR: { special: "home" },
@@ -124,7 +154,9 @@ describe("resolveEnvVars", () => {
     });
 
     it("should throw error for unknown special directory", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {};
       const envConfig: Record<string, EnvValue> = {
         UNKNOWN_DIR: {
@@ -145,7 +177,9 @@ describe("resolveEnvVars", () => {
 
   describe("EnvPass processing", () => {
     it("should pass through existing parent environment variables", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {
         HOME: "/home/user",
         PATH: "/usr/bin:/bin",
@@ -171,7 +205,9 @@ describe("resolveEnvVars", () => {
     });
 
     it("should throw error for undefined parent environment variables", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {};
       const envConfig: Record<string, EnvValue> = {
         MISSING_VAR: {
@@ -194,7 +230,9 @@ describe("resolveEnvVars", () => {
 
   describe("EnvCommand processing", () => {
     it("should execute simple commands and capture stdout", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = { USER: "testuser" };
       const envConfig: Record<string, EnvValue> = {
         ECHO_TEST: {
@@ -217,7 +255,9 @@ describe("resolveEnvVars", () => {
     });
 
     it("should template commands before execution", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = { MESSAGE: "templated" };
       const envConfig: Record<string, EnvValue> = {
         TEMPLATED_CMD: {
@@ -240,7 +280,9 @@ describe("resolveEnvVars", () => {
     });
 
     it("should handle command failures gracefully", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {};
       const envConfig: Record<string, EnvValue> = {
         FAILING_CMD: {
@@ -259,7 +301,9 @@ describe("resolveEnvVars", () => {
     });
 
     it("should run multiple commands in parallel", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {};
       const envConfig: Record<string, EnvValue> = {
         CMD1: { command: "echo first" },
@@ -288,7 +332,9 @@ describe("resolveEnvVars", () => {
 
   describe("Mixed environment configurations", () => {
     it("should handle all environment value types together", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {
         HOME: "/home/user",
         APP_NAME: "myapp",
@@ -335,7 +381,9 @@ describe("resolveEnvVars", () => {
 
   describe("Error handling", () => {
     it("should fail fast if any environment resolution fails", async () => {
-      const directoryResolver = createDirectoryResolver(testDir);
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(testDir)
+      );
       const parentEnv = {};
       const envConfig: Record<string, EnvValue> = {
         VALID: "hello" as EnvStringTemplate,

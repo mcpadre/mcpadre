@@ -3,6 +3,7 @@
 
 import { ContainerManager } from "../managers/container-manager.js";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { DockerUpgradeOptions, SingleUpgradeResult } from "./types.js";
 import type { Logger } from "pino";
 
@@ -11,10 +12,10 @@ import type { Logger } from "pino";
  */
 export async function upgradeDockerServer(
   options: DockerUpgradeOptions,
+  context: WorkspaceContext,
   logger: Logger
 ): Promise<SingleUpgradeResult> {
-  const { serverName, image, currentTag, targetTag, serverDir, digestInfo } =
-    options;
+  const { serverName, image, currentTag, targetTag, digestInfo } = options;
 
   logger.debug(
     `Upgrading Docker server ${serverName} from ${currentTag} to ${targetTag}`
@@ -42,7 +43,7 @@ export async function upgradeDockerServer(
           tag: targetTag,
           pullWhenDigestChanges: true, // Allow pulling for explicit upgrades
         },
-        projectDir: serverDir, // Use server dir directly
+        context,
         logger,
       });
     } else if (digestInfo?.digestChanged) {
@@ -58,7 +59,7 @@ export async function upgradeDockerServer(
           tag: targetTag,
           pullWhenDigestChanges: true, // Allow pulling for digest updates
         },
-        projectDir: serverDir, // Use server dir directly
+        context,
         logger,
       });
     } else {

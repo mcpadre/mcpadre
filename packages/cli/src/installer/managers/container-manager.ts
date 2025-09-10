@@ -3,12 +3,12 @@
 
 import Docker from "dockerode";
 
-import { getServerDirectoryPath } from "../../runner/server-directory/index.js";
+import { getServerPath } from "../../config/types/workspace.js";
 import { ContainerError } from "../../utils/errors.js";
 import { ContainerLockManager } from "../container-lock.js";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { ContainerOptionsV1 } from "../../config/types/v1/server/index.js";
-import type { ResolvedPath } from "../../runner/types/index.js";
 import type { Logger } from "pino";
 
 /**
@@ -19,12 +19,10 @@ export interface ContainerInstallOptions {
   serverName: string;
   /** Container configuration from mcpadre config */
   container: ContainerOptionsV1;
-  /** Base directory where .mcpadre is located (project mode) or user directory (user mode) */
-  projectDir: string;
+  /** Workspace context containing configuration and directory paths */
+  context: WorkspaceContext;
   /** Logger instance */
   logger: Logger;
-  /** Whether this is for user-level configuration */
-  isUserMode?: boolean;
   /** Dry run mode - don't actually pull images */
 }
 
@@ -82,7 +80,7 @@ export class ContainerManager {
   async installContainer(
     options: ContainerInstallOptions
   ): Promise<ContainerInstallResult> {
-    const { serverName, container, projectDir, logger } = options;
+    const { serverName, container, context, logger } = options;
     const { image, tag, pullWhenDigestChanges = false } = container;
 
     logger.debug(
@@ -104,11 +102,7 @@ export class ContainerManager {
     }
 
     // Set up lock manager with correct path based on mode
-    const serverDir = getServerDirectoryPath(
-      serverName,
-      projectDir as ResolvedPath,
-      options.isUserMode ?? false
-    );
+    const serverDir = getServerPath(context, serverName);
     const lockManager = new ContainerLockManager(serverDir, this.docker);
 
     try {

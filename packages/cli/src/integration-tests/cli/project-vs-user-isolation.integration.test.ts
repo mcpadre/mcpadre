@@ -1,12 +1,12 @@
 // pattern: Imperative Shell
 // Integration tests for project vs user mode isolation
 
-import { readFile,writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import YAML from "yaml";
 
-import { type SpawnFunction,withProcess } from "../helpers/spawn-cli-v2.js";
+import { type SpawnFunction, withProcess } from "../helpers/spawn-cli-v2.js";
 import {
   cleanupTestEnvironment,
   createMockServerInstallation,
@@ -18,7 +18,10 @@ import {
   waitForDocker,
 } from "../helpers/user-mode-utils.js";
 
-import type { CommandStringTemplate,SettingsUser } from "../../config/types/index.js";
+import type {
+  CommandStringTemplate,
+  SettingsUser,
+} from "../../config/types/index.js";
 
 describe("Project vs User Mode Isolation", () => {
   let tempUserDir: string;
@@ -63,6 +66,9 @@ describe("Project vs User Mode Isolation", () => {
         const projectConfig = {
           version: 1,
           mcpServers: sharedServerConfig,
+          hosts: {
+            "claude-code": true,
+          },
         };
         const projectConfigPath = join(tempProjectDir, "mcpadre.yaml");
         await writeFile(projectConfigPath, YAML.stringify(projectConfig));
@@ -93,7 +99,12 @@ describe("Project vs User Mode Isolation", () => {
 
         // Verify project files exist in project directory
         const fs = await import("fs/promises");
-        const projectServerPath = join(tempProjectDir, ".mcpadre", "servers", "shared-server");
+        const projectServerPath = join(
+          tempProjectDir,
+          ".mcpadre",
+          "servers",
+          "shared-server"
+        );
         try {
           await fs.access(join(projectServerPath, "package.json"));
           const projectFilesExist = true;
@@ -103,14 +114,17 @@ describe("Project vs User Mode Isolation", () => {
         }
 
         // Verify they are in SEPARATE locations (user files not in project, project files not in user)
-        // Note: This test might be tricky since project files SHOULD exist in project dir
-        // Instead, verify user files don't exist in project location
+        // With unified structure, check that user and project .mcpadre directories are separate
         try {
-          const userServerInProject = join(tempProjectDir, "servers", "shared-server");
-          await fs.access(userServerInProject);
-          expect.fail("User mode files should not exist in project directory");
+          // Check that user .mcpadre is not in project directory
+          await fs.access(
+            join(tempProjectDir, tempUserDir.split("/").pop() ?? "", ".mcpadre")
+          );
+          expect.fail(
+            "User .mcpadre directory should not be nested in project directory"
+          );
         } catch {
-          // Expected - user files should not be in project directory
+          // Expected - user .mcpadre should not be in project directory
         }
       })
     );
@@ -149,6 +163,9 @@ describe("Project vs User Mode Isolation", () => {
               },
             },
           },
+          hosts: {
+            "claude-code": true,
+          },
         };
         const projectConfigPath = join(tempProjectDir, "mcpadre.yaml");
         await writeFile(projectConfigPath, YAML.stringify(projectConfig));
@@ -178,17 +195,28 @@ describe("Project vs User Mode Isolation", () => {
 
         // Verify project installation exists separately
         const fs = await import("fs/promises");
-        const projectServerPath = join(tempProjectDir, ".mcpadre", "servers", serverName);
+        const projectServerPath = join(
+          tempProjectDir,
+          ".mcpadre",
+          "servers",
+          serverName
+        );
         try {
           await fs.access(join(projectServerPath, "package.json"));
-          
+
           // Read both package.json files to verify they have different versions
           const userPackageJson = await readFile(
-            join(tempUserDir, "servers", serverName, "package.json"), 
+            join(
+              tempUserDir,
+              ".mcpadre",
+              "servers",
+              serverName,
+              "package.json"
+            ),
             "utf8"
           );
           const projectPackageJson = await readFile(
-            join(projectServerPath, "package.json"), 
+            join(projectServerPath, "package.json"),
             "utf8"
           );
 
@@ -227,10 +255,13 @@ describe("Project vs User Mode Isolation", () => {
           mcpServers: {
             [serverName]: {
               container: {
-                image: "alpine", 
+                image: "alpine",
                 tag: "3.18", // Different tag
               },
             },
+          },
+          hosts: {
+            "claude-code": true,
           },
         };
         const projectConfigPath = join(tempProjectDir, "mcpadre.yaml");
@@ -238,7 +269,9 @@ describe("Project vs User Mode Isolation", () => {
 
         // Skip if Docker unavailable
         if (!(await waitForDocker())) {
-          console.log("Skipping container isolation test - Docker not available");
+          console.log(
+            "Skipping container isolation test - Docker not available"
+          );
           return;
         }
 
@@ -288,7 +321,15 @@ describe("Project vs User Mode Isolation", () => {
 
         const fs = await import("fs/promises");
         try {
-          await fs.access(join(tempProjectDir, ".mcpadre", "servers", serverName, "container.lock"));
+          await fs.access(
+            join(
+              tempProjectDir,
+              ".mcpadre",
+              "servers",
+              serverName,
+              "container.lock"
+            )
+          );
         } catch {
           expect.fail("Project mode lock file should exist");
         }
@@ -304,10 +345,10 @@ describe("Project vs User Mode Isolation", () => {
         const userConfig: SettingsUser = {
           version: 1,
           mcpServers: {
-            "user-only-server": {
+            "user-server": {
               node: {
-                package: "user-package",
-                version: "1.0.0",
+                package: "@modelcontextprotocol/server-filesystem",
+                version: "2025.8.21",
               },
             },
           },
@@ -321,36 +362,39 @@ describe("Project vs User Mode Isolation", () => {
         const projectConfig = {
           version: 1,
           mcpServers: {
-            "project-only-server": {
+            "project-server": {
               node: {
-                package: "project-package",
-                version: "2.0.0",
+                package: "@modelcontextprotocol/server-memory",
+                version: "2025.8.4",
               },
             },
+          },
+          hosts: {
+            "claude-code": true,
           },
         };
         const projectConfigPath = join(tempProjectDir, "mcpadre.yaml");
         await writeFile(projectConfigPath, YAML.stringify(projectConfig));
 
-        // Test user mode config loading
+        // Test user mode config loading with outdated command
         const userListResult = await runUserModeCommand(
           spawn,
           tempUserDir,
           tempProjectDir,
-          ["install", "--user", "--dry-run"]
+          ["outdated", "--user"]
         );
         expect(userListResult.exitCode).toBe(0);
-        expect(userListResult.stdout).toContain("user-only-server");
-        expect(userListResult.stdout).not.toContain("project-only-server");
+        expect(userListResult.stdout).toContain("user-server");
+        expect(userListResult.stdout).not.toContain("project-server");
 
-        // Test project mode config loading
-        const projectListResult = await spawn(["install", "--dry-run"], {
+        // Test project mode config loading with outdated command
+        const projectListResult = await spawn(["outdated"], {
           cwd: tempProjectDir,
           buffer: true,
         });
         expect(projectListResult.exitCode).toBe(0);
-        expect(projectListResult.stdout).toContain("project-only-server");
-        expect(projectListResult.stdout).not.toContain("user-only-server");
+        expect(projectListResult.stdout).toContain("project-server");
+        expect(projectListResult.stdout).not.toContain("user-server");
       })
     );
 
@@ -367,6 +411,9 @@ describe("Project vs User Mode Isolation", () => {
                 args: ["hello"],
               },
             },
+          },
+          hosts: {
+            "claude-code": true,
           },
         };
         const projectConfigPath = join(tempProjectDir, "mcpadre.yaml");
@@ -417,6 +464,9 @@ describe("Project vs User Mode Isolation", () => {
         const projectConfig = {
           version: 1,
           mcpServers: serverConfig,
+          hosts: {
+            "claude-code": true,
+          },
         };
         await writeFile(
           join(tempProjectDir, "mcpadre.yaml"),
@@ -424,37 +474,49 @@ describe("Project vs User Mode Isolation", () => {
         );
 
         // Install in both modes
-        await runUserModeCommand(spawn, tempUserDir, tempProjectDir, ["install", "--user"]);
+        await runUserModeCommand(spawn, tempUserDir, tempProjectDir, [
+          "install",
+          "--user",
+        ]);
         await spawn(["install"], { cwd: tempProjectDir, buffer: true });
 
         // Verify directory structures are separate
         const fs = await import("fs/promises");
 
-        // User mode structure: {userDir}/servers/{serverName}/
+        // User mode structure (unified): {userDir}/.mcpadre/servers/{serverName}/
         try {
-          await fs.access(join(tempUserDir, "servers", "structure-test-server"));
+          await fs.access(
+            join(tempUserDir, ".mcpadre", "servers", "structure-test-server")
+          );
         } catch {
           expect.fail("User mode server directory should exist");
         }
 
         // Project mode structure: {projectDir}/.mcpadre/servers/{serverName}/
         try {
-          await fs.access(join(tempProjectDir, ".mcpadre", "servers", "structure-test-server"));
+          await fs.access(
+            join(tempProjectDir, ".mcpadre", "servers", "structure-test-server")
+          );
         } catch {
           expect.fail("Project mode server directory should exist");
         }
 
         // Verify cross-contamination doesn't occur
+        // With unified structure, user directory SHOULD contain .mcpadre folder
         try {
           await fs.access(join(tempUserDir, ".mcpadre"));
-          expect.fail("User directory should not contain .mcpadre folder");
+          // Expected - user dir should have .mcpadre with unified structure
         } catch {
-          // Expected - user dir should not have .mcpadre
+          expect.fail(
+            "User directory should contain .mcpadre folder with unified structure"
+          );
         }
 
         try {
           await fs.access(join(tempProjectDir, "servers"));
-          expect.fail("Project directory should not contain servers folder (that's user mode)");
+          expect.fail(
+            "Project directory should not contain servers folder (that's old user mode structure)"
+          );
         } catch {
           // Expected - project dir should not have servers folder at root
         }
@@ -482,6 +544,9 @@ describe("Project vs User Mode Isolation", () => {
         const projectConfig = {
           version: 1,
           mcpServers: currentServers,
+          hosts: {
+            "claude-code": true,
+          },
         };
         await writeFile(
           join(tempProjectDir, "mcpadre.yaml"),
@@ -489,10 +554,10 @@ describe("Project vs User Mode Isolation", () => {
         );
 
         // Create orphaned directories in both locations
-        await createMockServerInstallation(tempUserDir, "user-orphan", true);
-        await createMockServerInstallation(tempUserDir, "current-server", true);
-        await createMockServerInstallation(tempProjectDir, "project-orphan", false);
-        await createMockServerInstallation(tempProjectDir, "current-server", false);
+        await createMockServerInstallation(tempUserDir, "user-orphan");
+        await createMockServerInstallation(tempUserDir, "current-server");
+        await createMockServerInstallation(tempProjectDir, "project-orphan");
+        await createMockServerInstallation(tempProjectDir, "current-server");
 
         // Run install in user mode
         const userResult = await runUserModeCommand(
@@ -511,8 +576,10 @@ describe("Project vs User Mode Isolation", () => {
         expect(projectResult.exitCode).toBe(0);
 
         // Verify each mode only reports its own orphans
-        const userOutput = String(userResult.stdout) + String(userResult.stderr);
-        const projectOutput = String(projectResult.stdout) + String(projectResult.stderr);
+        const userOutput =
+          String(userResult.stdout) + String(userResult.stderr);
+        const projectOutput =
+          String(projectResult.stdout) + String(projectResult.stderr);
 
         // User mode should find user-orphan, not project-orphan
         expect(userOutput.includes("user-orphan")).toBe(true);
@@ -555,23 +622,23 @@ describe("Project vs User Mode Isolation", () => {
           hosts: { "claude-code": true },
         });
 
-        // Install in first user directory
+        // Check first user directory config
         const result1 = await runUserModeCommand(
           spawn,
           userDir1,
           tempProjectDir,
-          ["install", "--user", "--dry-run"]
+          ["outdated", "--user"]
         );
         expect(result1.exitCode).toBe(0);
         expect(result1.stdout).toContain("user1-server");
         expect(result1.stdout).not.toContain("user2-server");
 
-        // Install in second user directory
+        // Check second user directory config
         const result2 = await runUserModeCommand(
           spawn,
           userDir2,
           tempProjectDir,
-          ["install", "--user", "--dry-run"]
+          ["outdated", "--user"]
         );
         expect(result2.exitCode).toBe(0);
         expect(result2.stdout).toContain("user2-server");
@@ -587,7 +654,10 @@ describe("Project vs User Mode Isolation", () => {
           version: 1,
           mcpServers: {
             "mode-switch-server": {
-              node: { package: "user-package", version: "1.0.0" },
+              node: {
+                package: "@modelcontextprotocol/server-filesystem",
+                version: "2025.8.21",
+              },
             },
           },
           hosts: { "claude-code": true },
@@ -598,8 +668,14 @@ describe("Project vs User Mode Isolation", () => {
           version: 1,
           mcpServers: {
             "mode-switch-server": {
-              node: { package: "project-package", version: "2.0.0" },
+              node: {
+                package: "@modelcontextprotocol/server-memory",
+                version: "2025.8.4",
+              },
             },
+          },
+          hosts: {
+            "claude-code": true,
           },
         };
         await writeFile(

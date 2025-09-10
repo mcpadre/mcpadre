@@ -12,7 +12,40 @@ import {
   isMcpadreServer,
 } from "./server-detector.js";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { HostConfigSpec } from "../updaters/generic-updater.js";
+
+/**
+ * Helper function to create a WorkspaceContext for testing
+ */
+function createTestWorkspaceContext(
+  workspaceDir: string,
+  isUserMode: boolean
+): WorkspaceContext {
+  const baseConfig = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  if (isUserMode) {
+    return {
+      workspaceType: "user",
+      workspaceDir,
+      mergedConfig: baseConfig,
+      userConfig: baseConfig,
+    };
+  } else {
+    return {
+      workspaceType: "project",
+      workspaceDir,
+      mergedConfig: baseConfig,
+      projectConfig: baseConfig,
+      userConfig: undefined,
+    };
+  }
+}
 
 describe("server-detector", () => {
   describe("isMcpadreServer", () => {
@@ -332,10 +365,10 @@ describe("server-detector", () => {
 
         const mcpadreServerNames = new Set(["current-server"]);
 
+        const context = createTestWorkspaceContext(tempDir, false);
         const result = await analyzeServerDirectories(
-          tempDir,
-          mcpadreServerNames,
-          false // isUserMode: false (project mode)
+          context,
+          mcpadreServerNames
         );
 
         expect(result.orphanedDirectories).toEqual(
@@ -345,10 +378,10 @@ describe("server-detector", () => {
       });
 
       it("handles missing .mcpadre/servers directory", async () => {
+        const context = createTestWorkspaceContext(tempDir, false);
         const result = await analyzeServerDirectories(
-          tempDir,
-          new Set(["some-server"]),
-          false // isUserMode: false (project mode)
+          context,
+          new Set(["some-server"])
         );
 
         expect(result.orphanedDirectories).toEqual([]);
@@ -358,10 +391,10 @@ describe("server-detector", () => {
         const serversDir = join(tempDir, ".mcpadre", "servers");
         await mkdir(serversDir, { recursive: true });
 
+        const context = createTestWorkspaceContext(tempDir, false);
         const result = await analyzeServerDirectories(
-          tempDir,
-          new Set(["some-server"]),
-          false // isUserMode: false (project mode)
+          context,
+          new Set(["some-server"])
         );
 
         expect(result.orphanedDirectories).toEqual([]);
@@ -377,23 +410,20 @@ describe("server-detector", () => {
         // Create a directory that should be reported as orphaned
         await mkdir(join(serversDir, "orphaned-directory"));
 
-        const result = await analyzeServerDirectories(
-          tempDir,
-          new Set(),
-          false // isUserMode: false (project mode)
-        );
+        const context = createTestWorkspaceContext(tempDir, false);
+        const result = await analyzeServerDirectories(context, new Set());
 
         expect(result.orphanedDirectories).toEqual(["orphaned-directory"]);
       });
     });
 
     describe("user mode (isUserMode: true)", () => {
-      it("analyzes servers/ directory when isUserMode=true", async () => {
-        // Create servers directory structure (user mode)
-        const userServersDir = join(tempDir, "servers");
+      it("analyzes .mcpadre/servers/ directory when isUserMode=true", async () => {
+        // Create servers directory structure (unified approach for user mode)
+        const userServersDir = join(tempDir, ".mcpadre", "servers");
         await mkdir(userServersDir, { recursive: true });
 
-        // Create server directories in user mode location
+        // Create server directories in unified location
         await mkdir(join(userServersDir, "user-current-server"));
         await mkdir(join(userServersDir, "user-orphaned-server1"));
         await mkdir(join(userServersDir, "user-orphaned-server2"));
@@ -414,10 +444,10 @@ describe("server-detector", () => {
 
         const mcpadreServerNames = new Set(["user-current-server"]);
 
+        const context = createTestWorkspaceContext(tempDir, true);
         const result = await analyzeServerDirectories(
-          tempDir,
-          mcpadreServerNames,
-          true // isUserMode: true (user mode)
+          context,
+          mcpadreServerNames
         );
 
         expect(result.orphanedDirectories).toEqual(
@@ -429,9 +459,9 @@ describe("server-detector", () => {
         expect(result.orphanedDirectories).toHaveLength(2);
       });
 
-      it("finds orphaned directories in userDir/servers/", async () => {
-        // Create user mode servers directory with orphaned content
-        const userServersDir = join(tempDir, "servers");
+      it("finds orphaned directories in userDir/.mcpadre/servers/", async () => {
+        // Create user mode servers directory with orphaned content (unified approach)
+        const userServersDir = join(tempDir, ".mcpadre", "servers");
         await mkdir(userServersDir, { recursive: true });
 
         await mkdir(join(userServersDir, "orphan-alpha"));
@@ -443,11 +473,8 @@ describe("server-detector", () => {
         await writeFile(join(userServersDir, "orphan-beta", "setup.py"), "");
 
         // Empty server names set - all should be orphans
-        const result = await analyzeServerDirectories(
-          tempDir,
-          new Set(),
-          true // isUserMode: true
-        );
+        const context = createTestWorkspaceContext(tempDir, true);
+        const result = await analyzeServerDirectories(context, new Set());
 
         expect(result.orphanedDirectories).toEqual(
           expect.arrayContaining(["orphan-alpha", "orphan-beta"])
@@ -457,64 +484,56 @@ describe("server-detector", () => {
 
       it("handles missing userDir/servers/ gracefully", async () => {
         // Don't create the servers directory at all
+        const context = createTestWorkspaceContext(tempDir, true);
         const result = await analyzeServerDirectories(
-          tempDir,
-          new Set(["some-server"]),
-          true // isUserMode: true
+          context,
+          new Set(["some-server"])
         );
 
         expect(result.orphanedDirectories).toEqual([]);
       });
 
-      it("should not look in .mcpadre/servers when isUserMode=true", async () => {
-        // Create both project and user mode directories with different content
-        const projectServersDir = join(tempDir, ".mcpadre", "servers");
-        const userServersDir = join(tempDir, "servers");
-        await mkdir(projectServersDir, { recursive: true });
+      it("should look in .mcpadre/servers for user mode (unified approach)", async () => {
+        // With unified approach, user mode also uses .mcpadre/servers
+        const userServersDir = join(tempDir, ".mcpadre", "servers");
         await mkdir(userServersDir, { recursive: true });
 
-        // Add orphaned server to project mode directory
-        await mkdir(join(projectServersDir, "project-orphan"));
-        await writeFile(
-          join(projectServersDir, "project-orphan", "package.json"),
-          "{}"
-        );
-
-        // Add orphaned server to user mode directory
+        // Add orphaned server to user workspace
         await mkdir(join(userServersDir, "user-orphan"));
         await writeFile(
           join(userServersDir, "user-orphan", "package.json"),
           "{}"
         );
 
+        const context = createTestWorkspaceContext(tempDir, true);
         const result = await analyzeServerDirectories(
-          tempDir,
-          new Set(), // No current servers
-          true // isUserMode: true - should only look in servers/, not .mcpadre/servers/
+          context,
+          new Set() // No current servers
         );
 
-        // Should only find the user mode orphan, not the project mode orphan
+        // Should find the orphan in .mcpadre/servers
         expect(result.orphanedDirectories).toEqual(["user-orphan"]);
-        expect(result.orphanedDirectories).not.toContain("project-orphan");
       });
     });
 
     describe("mode comparison", () => {
-      it("should find different orphans in project vs user modes", async () => {
-        // Create both directory structures with different orphans
-        const projectServersDir = join(tempDir, ".mcpadre", "servers");
-        const userServersDir = join(tempDir, "servers");
-        await mkdir(projectServersDir, { recursive: true });
-        await mkdir(userServersDir, { recursive: true });
+      it("should find different orphans in project vs user workspaces", async () => {
+        // Create separate workspace directories for project and user modes
+        const projectDir = join(tempDir, "project-workspace");
+        const userDir = join(tempDir, "user-workspace");
 
-        // Project mode orphans
+        // Create project mode servers directory with orphan
+        const projectServersDir = join(projectDir, ".mcpadre", "servers");
+        await mkdir(projectServersDir, { recursive: true });
         await mkdir(join(projectServersDir, "project-server-orphan"));
         await writeFile(
           join(projectServersDir, "project-server-orphan", "package.json"),
           "{}"
         );
 
-        // User mode orphans
+        // Create user mode servers directory with orphan
+        const userServersDir = join(userDir, ".mcpadre", "servers");
+        await mkdir(userServersDir, { recursive: true });
         await mkdir(join(userServersDir, "user-server-orphan"));
         await writeFile(
           join(userServersDir, "user-server-orphan", "requirements.txt"),
@@ -522,17 +541,17 @@ describe("server-detector", () => {
         );
 
         // Test project mode
+        const projectContext = createTestWorkspaceContext(projectDir, false);
         const projectResult = await analyzeServerDirectories(
-          tempDir,
-          new Set(),
-          false // isUserMode: false
+          projectContext,
+          new Set()
         );
 
         // Test user mode
+        const userContext = createTestWorkspaceContext(userDir, true);
         const userResult = await analyzeServerDirectories(
-          tempDir,
-          new Set(),
-          true // isUserMode: true
+          userContext,
+          new Set()
         );
 
         expect(projectResult.orphanedDirectories).toEqual([
@@ -544,37 +563,30 @@ describe("server-detector", () => {
         );
       });
 
-      it("should handle same directory with different mode settings", async () => {
-        // Create overlapping server names in both locations
-        const projectServersDir = join(tempDir, ".mcpadre", "servers");
-        const userServersDir = join(tempDir, "servers");
-        await mkdir(projectServersDir, { recursive: true });
-        await mkdir(userServersDir, { recursive: true });
+      it("should handle unified directory structure for both modes", async () => {
+        // Create unified .mcpadre/servers directory
+        const serversDir = join(tempDir, ".mcpadre", "servers");
+        await mkdir(serversDir, { recursive: true });
 
-        // Same server name in both locations
-        await mkdir(join(projectServersDir, "same-server"));
-        await mkdir(join(userServersDir, "same-server"));
+        // Create a server that's in the current config
+        await mkdir(join(serversDir, "current-server"));
         await writeFile(
-          join(projectServersDir, "same-server", "package.json"),
+          join(serversDir, "current-server", "package.json"),
           "{}"
         );
-        await writeFile(
-          join(userServersDir, "same-server", "requirements.txt"),
-          ""
-        );
 
-        const currentServers = new Set(["same-server"]);
+        const currentServers = new Set(["current-server"]);
 
-        // Test both modes - neither should report "same-server" as orphaned
+        // Test both modes - both should use the same directory and find no orphans
+        const projectContext = createTestWorkspaceContext(tempDir, false);
         const projectResult = await analyzeServerDirectories(
-          tempDir,
-          currentServers,
-          false
+          projectContext,
+          currentServers
         );
+        const userContext = createTestWorkspaceContext(tempDir, true);
         const userResult = await analyzeServerDirectories(
-          tempDir,
-          currentServers,
-          true
+          userContext,
+          currentServers
         );
 
         expect(projectResult.orphanedDirectories).toEqual([]);
@@ -606,9 +618,10 @@ describe("server-detector", () => {
 
       const mcpadreServerNames = new Set(["current-server"]);
 
-      // Call without isUserMode parameter (should default to false)
+      // Call with project context (default behavior)
+      const context = createTestWorkspaceContext(tempDir, false);
       const result = await analyzeServerDirectories(
-        tempDir,
+        context,
         mcpadreServerNames
       );
 

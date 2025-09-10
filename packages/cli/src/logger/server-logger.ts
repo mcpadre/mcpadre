@@ -6,31 +6,31 @@ import { join } from "node:path";
 
 import pino, { type Level } from "pino";
 
+import { getServerLogsPath } from "../config/types/workspace.js";
+
 import { mapLogLevelToPinoLevel } from "./config.js";
 
+import type { WorkspaceContext } from "../config/types/index.js";
 import type { ResolvedPath } from "../runner/types/index.js";
 
 /**
  * Create a dedicated logger for an MCP server that writes to a file
- * in .mcpadre/logs/ directory (project mode) or logs/ directory (user mode)
- * with JSON format for debugging
+ * in the workspace's logs directory with JSON format for debugging
  *
  * @param serverName Name of the MCP server
- * @param baseDir Base directory path (workspace for project mode, user dir for user mode)
+ * @param baseDir Base directory path (workspace directory)
  * @param logLevel Log level for the server logger (defaults to debug)
- * @param isUserMode Whether this is for user-level configuration (defaults to false)
+ * @param context Workspace context for determining directory structure
  * @returns Promise resolving to configured pino logger
  */
 export async function createServerLogger(
   serverName: string,
-  baseDir: ResolvedPath,
+  _baseDir: ResolvedPath,
   logLevel: Level = "debug",
-  isUserMode = false
+  context: WorkspaceContext
 ): Promise<pino.Logger> {
-  // Create logs directory structure - different for user vs project mode
-  const logsDir = isUserMode
-    ? join(baseDir, "logs")
-    : join(baseDir, ".mcpadre", "logs");
+  // Create logs directory using workspace context
+  const logsDir = getServerLogsPath(context, serverName);
   await mkdir(logsDir, { recursive: true });
 
   // Generate timestamped log file name
@@ -73,22 +73,19 @@ export async function createServerLogger(
 
 /**
  * Create simplified log file path for server logging
- * Format: .mcpadre/logs/{serverName}__{ISO-timestamp}.jsonl (project mode)
- *         logs/{serverName}__{ISO-timestamp}.jsonl (user mode)
+ * Format: {workspace}/.mcpadre/servers/{serverName}/logs/{serverName}__{ISO-timestamp}.jsonl
  *
  * @param serverName Name of the MCP server
- * @param baseDir Base directory path (workspace for project mode, user dir for user mode)
- * @param isUserMode Whether this is for user-level configuration (defaults to false)
+ * @param baseDir Base directory path (workspace directory)
+ * @param context Workspace context for determining directory structure
  * @returns Promise resolving to full log file path
  */
 export async function createServerLogPath(
   serverName: string,
-  baseDir: ResolvedPath,
-  isUserMode = false
+  _baseDir: ResolvedPath,
+  context: WorkspaceContext
 ): Promise<string> {
-  const logsDir = isUserMode
-    ? join(baseDir, "logs")
-    : join(baseDir, ".mcpadre", "logs");
+  const logsDir = getServerLogsPath(context, serverName);
   await mkdir(logsDir, { recursive: true });
 
   const timestamp = new Date().toISOString();

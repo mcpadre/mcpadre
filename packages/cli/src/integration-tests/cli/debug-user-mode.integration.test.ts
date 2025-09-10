@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { withProcess, type SpawnFunction } from "../helpers/spawn-cli-v2.js";
+import { type SpawnFunction, withProcess } from "../helpers/spawn-cli-v2.js";
 
 describe("Debug User Mode", () => {
   it(

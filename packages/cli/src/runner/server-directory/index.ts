@@ -3,28 +3,27 @@
 import { mkdir } from "fs/promises";
 import { join } from "path";
 
-import type { ResolvedPath } from "../types/index.js";
+import {
+  getServerLogsPath,
+  getServerPath,
+} from "../../config/types/workspace.js";
+
+import type { WorkspaceContext } from "../../config/types/index.js";
 
 /**
  * Creates the server directory structure for a given server
  * Directory structure:
- * - Project mode: .mcpadre/servers/{server-name}/logs/
- * - User mode: {userDir}/servers/{server-name}/logs/
+ * - Both modes: {workspace}/.mcpadre/servers/{server-name}/logs/
  *
+ * @param context Workspace context containing the workspace directory
  * @param serverName Name of the MCP server
- * @param baseDir Base directory path (workspace for project mode, user dir for user mode)
- * @param isUserMode Whether this is for user-level configuration
  * @returns Promise resolving to the logs directory path
  */
 export async function createServerDirectory(
-  serverName: string,
-  baseDir: ResolvedPath,
-  isUserMode = false
+  context: WorkspaceContext,
+  serverName: string
 ): Promise<string> {
-  const serverDir = isUserMode
-    ? join(baseDir, "servers", serverName)
-    : join(baseDir, ".mcpadre", "servers", serverName);
-  const logsDir = join(serverDir, "logs");
+  const logsDir = getServerLogsPath(context, serverName);
 
   // Create the directory structure recursively
   await mkdir(logsDir, { recursive: true });
@@ -49,36 +48,27 @@ export function createLogFilePath(serverName: string, logsDir: string): string {
 /**
  * Gets the server directory path (without creating it)
  *
+ * @param context Workspace context containing the workspace directory
  * @param serverName Name of the MCP server
- * @param baseDir Base directory path (workspace for project mode, user dir for user mode)
- * @param isUserMode Whether this is for user-level configuration
  * @returns Server directory path
  */
 export function getServerDirectoryPath(
-  serverName: string,
-  baseDir: ResolvedPath,
-  isUserMode = false
+  context: WorkspaceContext,
+  serverName: string
 ): string {
-  return isUserMode
-    ? join(baseDir, "servers", serverName)
-    : join(baseDir, ".mcpadre", "servers", serverName);
+  return getServerPath(context, serverName);
 }
 
 /**
  * Gets the logs directory path (without creating it)
  *
+ * @param context Workspace context containing the workspace directory
  * @param serverName Name of the MCP server
- * @param baseDir Base directory path (workspace for project mode, user dir for user mode)
- * @param isUserMode Whether this is for user-level configuration
  * @returns Logs directory path
  */
 export function getLogsDirectoryPath(
-  serverName: string,
-  baseDir: ResolvedPath,
-  isUserMode = false
+  context: WorkspaceContext,
+  serverName: string
 ): string {
-  const serverDir = isUserMode
-    ? join(baseDir, "servers", serverName)
-    : join(baseDir, ".mcpadre", "servers", serverName);
-  return join(serverDir, "logs");
+  return getServerLogsPath(context, serverName);
 }

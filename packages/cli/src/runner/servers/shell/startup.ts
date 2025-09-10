@@ -70,27 +70,23 @@ async function parseShellCommand(
 export async function startShellServer(
   options: ShellStartupConfig
 ): Promise<void> {
-  const { serverName, serverConfig, projectConfig, logger } = options;
+  const { serverName, serverConfig, context, logger } = options;
   const shellServer = serverConfig;
+  const projectConfig = context.mergedConfig;
 
   // Set up common server environment
   const { directoryResolver, envStringMap } = await setupServerEnvironment({
+    context,
     envConfig: shellServer.env ?? {},
     logger,
   });
 
   // Create dedicated server logger for debugging MCP server communication
-  // Use user directory if in user mode, otherwise use workspace directory
-  const loggerBaseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : (directoryResolver.workspace as ResolvedPath);
-
   const serverLogger = await createServerLogger(
     serverName,
-    loggerBaseDir,
+    directoryResolver.workspace,
     "trace", // Use trace level to capture all our detailed debugging logs
-    options.isUserMode
+    context
   );
   logger.debug(
     { serverName, logLevel: "trace" },
@@ -135,7 +131,7 @@ export async function startShellServer(
     sandboxConfig: shellServer.sandbox ?? {},
     directoryResolver,
     ...(workspaceOptions && { workspaceOptions }),
-    ...(options.isUserMode !== undefined && { isUserMode: options.isUserMode }),
+    context,
     logger,
   });
 
@@ -167,6 +163,7 @@ export async function startShellServer(
     serverName,
     directoryResolver,
     logger,
+    context,
   });
 
   logger.info(`Connected to ${connectionInfo}`);

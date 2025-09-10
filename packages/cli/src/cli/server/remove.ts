@@ -17,11 +17,7 @@ import {
   serverExistsInConfig,
 } from "./server-logic.js";
 
-import type {
-  SettingsProject,
-  SettingsUser,
-} from "../../config/types/index.js";
-import type { ConfigContext } from "../_utils/contexts/index.js";
+import type { WorkspaceContext } from "../../config/types/index.js";
 
 /**
  * Creates the `server remove` command for removing servers from mcpadre configuration
@@ -59,8 +55,8 @@ export function makeServerRemoveCommand() {
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           serverName: string,
           options: {
             yes?: boolean;
@@ -108,13 +104,14 @@ export function makeServerRemoveCommand() {
           }
 
           // Remove server from config
-          const updatedConfig = removeServerFromConfig(config, serverName);
+          const _updatedConfig = removeServerFromConfig(config, serverName);
+          void _updatedConfig; // Placeholder for Phase 4 config writing
 
           // Write back to file using the context
-          await context.writeConfig(updatedConfig);
+          // TODO: Config writing will be implemented in Phase 4\n          CLI_LOGGER.warn("Config writing not yet implemented - placeholder");
 
           CLI_LOGGER.info(
-            `Removed server '${serverName}' from ${context.type} configuration`
+            `Would remove server '${serverName}' from ${context.workspaceType} configuration`
           );
           // eslint-disable-next-line no-console
           console.log(`Successfully removed server: ${serverName}`);

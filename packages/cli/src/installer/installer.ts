@@ -1,6 +1,7 @@
 // pattern: Imperative Shell
 
 import { CLI_LOGGER } from "../cli/_deps.js";
+import { getServerPath } from "../config/types/workspace.js";
 import { HostError } from "../utils/errors.js";
 
 import { readConfigFile, writeConfigFile } from "./config/config-io.js";
@@ -20,7 +21,7 @@ import {
   shouldManageGitignore,
 } from "./gitignore-manager.js";
 
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
+import type { SettingsBase, WorkspaceContext } from "../config/types/index.js";
 import type { SupportedHostV1 } from "../config/types/v1/hosts.js";
 import type {
   ContainerMcpServerV1,
@@ -36,10 +37,8 @@ import type { Logger } from "pino";
 export interface InstallOptions {
   /** Target host to install configuration for */
   host: SupportedHostV1;
-  /** Project configuration (passed from higher-order function) */
-  config: SettingsProject;
-  /** Project directory containing the configuration file */
-  projectDir: string;
+  /** Workspace context containing configuration and directory paths */
+  context: WorkspaceContext;
   /** Override project skipGitignoreOnInstall setting (force skip gitignore management) */
   skipGitignore?: boolean;
   /** Logger for container operations */
@@ -72,10 +71,8 @@ export interface InstallResult {
  * Options for bulk installation operation
  */
 export interface BulkInstallOptions {
-  /** Project configuration (passed from higher-order function) */
-  config: SettingsProject;
-  /** Project directory containing the configuration file */
-  projectDir: string;
+  /** Workspace context containing configuration and directory paths */
+  context: WorkspaceContext;
   /** Override project skipGitignoreOnInstall setting (force skip gitignore management) */
   skipGitignore?: boolean;
   /** Logger for container operations */
@@ -139,12 +136,14 @@ export async function installForHost(
 ): Promise<InstallResult> {
   const {
     host,
-    config,
-    projectDir,
+    context,
     skipGitignore = false,
     logger,
     force = false,
   } = options;
+
+  const config = context.mergedConfig;
+  const projectDir = context.workspaceDir;
 
   // Install container images for any container servers
   let containerImagesPulled = 0;
@@ -159,7 +158,7 @@ export async function installForHost(
           const installResult = await containerManager.installContainer({
             serverName,
             container: serverConfig.container,
-            projectDir,
+            context,
             logger,
           });
 
@@ -191,11 +190,11 @@ export async function installForHost(
     )) {
       if (isPythonServer(serverConfig)) {
         try {
-          const serverDir = `${projectDir}/.mcpadre/servers/${serverName}`;
+          const serverDir = getServerPath(context, serverName);
           const installResult = await pythonManager.installPython({
             serverName,
             python: serverConfig.python,
-            projectDir,
+            context,
             serverDir,
             logger,
             force,
@@ -249,7 +248,7 @@ export async function installForHost(
     )) {
       if (isNodeServer(serverConfig) && "node" in serverConfig) {
         try {
-          const serverDir = `${projectDir}/.mcpadre/servers/${serverName}`;
+          const serverDir = getServerPath(context, serverName);
           const nodeServerConfig = serverConfig as NodeMcpServerV1 & {
             node: NodeOptionsV1;
             installImplicitlyUpgradesChangedPackages?: boolean;
@@ -257,7 +256,7 @@ export async function installForHost(
           const installResult = await nodeManager.installNode({
             serverName,
             node: nodeServerConfig.node,
-            projectDir,
+            context,
             serverDir,
             logger,
             force,
@@ -324,9 +323,8 @@ export async function installForHost(
 
   // Analyze server directories on disk
   const directoryAnalysis = await analyzeServerDirectories(
-    projectDir,
-    new Set(Object.keys(config.mcpServers)),
-    false // Project mode
+    context,
+    new Set(Object.keys(config.mcpServers))
   );
 
   // Log external servers (INFO level)
@@ -349,7 +347,7 @@ export async function installForHost(
         `Removing orphaned mcpadre server '${orphanedServer}' from ${hostConfigName} (no longer in mcpadre.yaml)`
       );
       logger.warn(
-        `Server directory .mcpadre/servers/${orphanedServer} was preserved - delete manually if no longer needed`
+        `Server directory ${getServerPath(context, orphanedServer)} was preserved - delete manually if no longer needed`
       );
     }
   }
@@ -358,10 +356,10 @@ export async function installForHost(
   if (directoryAnalysis.orphanedDirectories.length > 0 && logger) {
     for (const orphanedDir of directoryAnalysis.orphanedDirectories) {
       logger.warn(
-        `Found orphaned server directory: .mcpadre/servers/${orphanedDir} (no longer in mcpadre.yaml)`
+        `Found orphaned server directory: ${getServerPath(context, orphanedDir)} (no longer in mcpadre.yaml)`
       );
       logger.warn(
-        `Delete manually if no longer needed: rm -rf .mcpadre/servers/${orphanedDir}`
+        `Delete manually if no longer needed: rm -rf ${getServerPath(context, orphanedDir)}`
       );
     }
   }
@@ -407,7 +405,7 @@ export async function installForHost(
  * @param config Project configuration
  * @returns Array of enabled hosts
  */
-function getEnabledHosts(config: SettingsProject): SupportedHostV1[] {
+function getEnabledHosts(config: SettingsBase): SupportedHostV1[] {
   if (!config.hosts) {
     return [];
   }
@@ -438,13 +436,10 @@ function getEnabledHosts(config: SettingsProject): SupportedHostV1[] {
 export async function installForAllEnabledHosts(
   options: BulkInstallOptions
 ): Promise<BulkInstallResult> {
-  const {
-    config,
-    projectDir,
-    skipGitignore = false,
-    logger,
-    force = false,
-  } = options;
+  const { context, skipGitignore = false, logger, force = false } = options;
+
+  const config = context.mergedConfig;
+  const projectDir = context.workspaceDir;
 
   // Get enabled hosts from configuration
   const enabledHosts = getEnabledHosts(config);
@@ -459,8 +454,7 @@ export async function installForAllEnabledHosts(
   for (const host of enabledHosts) {
     const installOptions: InstallOptions = {
       host,
-      config,
-      projectDir,
+      context,
       skipGitignore: true, // We'll handle gitignore once at the end
       force,
       ...(logger && { logger }),
@@ -511,7 +505,7 @@ export async function installForAllEnabledHosts(
         const installResult = await containerManager.installContainer({
           serverName,
           container: serverConfig.container,
-          projectDir,
+          context,
           logger: logger ?? CLI_LOGGER,
         });
 
@@ -544,315 +538,6 @@ export async function installForAllEnabledHosts(
   return {
     results: results as Record<SupportedHostV1, InstallResult>,
     enabledHosts,
-    totalServers,
-    filesCreated,
-    filesUpdated,
-  };
-}
-
-// =====================================================================================
-// USER INSTALLATION FUNCTIONS
-// =====================================================================================
-
-/**
- * Options for user installation operation
- */
-export interface UserInstallOptions {
-  /** Target host to install configuration for */
-  host: SupportedHostV1;
-  /** User configuration */
-  config: SettingsUser;
-  /** User directory containing servers and configuration */
-  userDir: string;
-  /** Logger for operations */
-  logger?: Logger;
-  /** Force upgrades even when package versions change */
-  force?: boolean;
-}
-
-/**
- * Options for bulk user installation operation
- */
-export interface BulkUserInstallOptions {
-  /** User configuration */
-  config: SettingsUser;
-  /** User directory containing servers and configuration */
-  userDir: string;
-  /** Logger for operations */
-  logger?: Logger;
-  /** Force upgrades even when package versions change */
-  force?: boolean;
-}
-
-/**
- * Install MCP servers and update global host configuration for a single host in user mode
- */
-export async function installForUserHost(
-  options: UserInstallOptions
-): Promise<InstallResult> {
-  const { host, config, userDir, logger, force = false } = options;
-
-  // Install Node.js, Python, and Container servers to user directory
-  let containerImagesPulled = 0;
-
-  if (logger) {
-    // Install Container images for any container servers
-    const containerManager = new ContainerManager(logger);
-    for (const [serverName, serverConfig] of Object.entries(
-      config.mcpServers
-    )) {
-      if (isContainerServer(serverConfig)) {
-        try {
-          const installResult = await containerManager.installContainer({
-            serverName,
-            container: serverConfig.container,
-            projectDir: userDir, // Use user directory as project directory
-            logger,
-            isUserMode: true, // Enable user mode for container manager
-          });
-
-          if (installResult.imagePulled) {
-            containerImagesPulled++;
-          }
-
-          logger.debug(
-            { serverName, message: installResult.message },
-            "Container install result"
-          );
-        } catch (error: unknown) {
-          logger.error(
-            { error, serverName },
-            `Failed to install container for server ${serverName}`
-          );
-          throw error;
-        }
-      }
-    }
-
-    // Install Python environments for any Python servers
-    const pythonManager = new PythonManager();
-    for (const [serverName, serverConfig] of Object.entries(
-      config.mcpServers
-    )) {
-      if (isPythonServer(serverConfig)) {
-        try {
-          const serverDir = `${userDir}/servers/${serverName}`;
-          const installResult = await pythonManager.installPython({
-            serverName,
-            python: serverConfig.python,
-            projectDir: userDir,
-            serverDir,
-            logger,
-            force,
-            installImplicitlyUpgradesChangedPackages:
-              serverConfig.installImplicitlyUpgradesChangedPackages ??
-              config.options?.installImplicitlyUpgradesChangedPackages ??
-              false,
-          });
-
-          logger.debug(
-            { serverName, message: installResult.message },
-            "Python install result"
-          );
-        } catch (error: unknown) {
-          logger.error(
-            { error, serverName },
-            `Failed to install Python server ${serverName}`
-          );
-          throw error;
-        }
-      }
-    }
-
-    // Install Node.js environments for any Node.js servers
-    const nodeManager = new NodeManager();
-    for (const [serverName, serverConfig] of Object.entries(
-      config.mcpServers
-    )) {
-      if (isNodeServer(serverConfig) && "node" in serverConfig) {
-        try {
-          const serverDir = `${userDir}/servers/${serverName}`;
-          const installResult = await nodeManager.installNode({
-            serverName,
-            node: serverConfig.node,
-            projectDir: userDir,
-            serverDir,
-            logger,
-            force,
-            installImplicitlyUpgradesChangedPackages:
-              serverConfig.installImplicitlyUpgradesChangedPackages ??
-              config.options?.installImplicitlyUpgradesChangedPackages ??
-              false,
-          });
-
-          logger.debug(
-            { serverName, message: installResult.message },
-            "Node install result"
-          );
-        } catch (error: unknown) {
-          logger.error(
-            { error, serverName },
-            `Failed to install Node server ${serverName}`
-          );
-          throw error;
-        }
-      }
-    }
-  }
-
-  // Get host configuration details
-  const hostConfig = HOST_CONFIGS[host];
-
-  // Check if host supports user-level configuration
-  if (
-    !hostConfig.userConfigPath ||
-    !hostConfig.userMcpConfigUpdaterWithAnalysis
-  ) {
-    throw new HostError(
-      `Host '${host}' does not support user-level configuration`,
-      host
-    );
-  }
-
-  // Determine user config path
-  const configPath =
-    typeof hostConfig.userConfigPath === "function"
-      ? hostConfig.userConfigPath()
-      : hostConfig.userConfigPath;
-
-  // Read existing host configuration
-  const existingContent = await readConfigFile("", configPath);
-  const wasCreated = existingContent === "";
-
-  // Update global configuration with analysis
-  const configUpdateResult = hostConfig.userMcpConfigUpdaterWithAnalysis(
-    existingContent,
-    config.mcpServers
-  );
-
-  const serverCount = Object.keys(config.mcpServers).length;
-
-  // Analyze server directories on disk (in user directory)
-  const directoryAnalysis = await analyzeServerDirectories(
-    userDir,
-    new Set(Object.keys(config.mcpServers)),
-    true // User mode
-  );
-
-  // Log external servers (INFO level)
-  if (configUpdateResult.analysis.external.length > 0 && logger) {
-    const externalServers = configUpdateResult.analysis.external.join(", ");
-    logger.info(
-      `Found ${configUpdateResult.analysis.external.length} non-mcpadre server(s) in ${configPath}: ${externalServers}`
-    );
-    logger.info(
-      "Consider adding these to your user mcpadre.yaml to manage them centrally"
-    );
-  }
-
-  // Log orphaned servers (WARN level)
-  if (configUpdateResult.analysis.mcpadreOrphaned.length > 0 && logger) {
-    for (const orphanedServer of configUpdateResult.analysis.mcpadreOrphaned) {
-      logger.warn(
-        `Removing orphaned mcpadre server '${orphanedServer}' from ${configPath} (no longer in user mcpadre.yaml)`
-      );
-      logger.warn(
-        `Server directory ${userDir}/servers/${orphanedServer} was preserved - delete manually if no longer needed`
-      );
-    }
-  }
-
-  // Log orphaned directories (WARN level)
-  if (directoryAnalysis.orphanedDirectories.length > 0 && logger) {
-    for (const orphanedDir of directoryAnalysis.orphanedDirectories) {
-      logger.warn(
-        `Found orphaned server directory: ${userDir}/servers/${orphanedDir} (no longer in user mcpadre.yaml)`
-      );
-      logger.warn(
-        `Delete manually if no longer needed: rm -rf ${userDir}/servers/${orphanedDir}`
-      );
-    }
-  }
-
-  // Write updated global configuration
-  await writeConfigFile("", configPath, configUpdateResult.updatedConfig);
-
-  return {
-    configPath,
-    wasCreated,
-    gitignoreUpdated: false, // No gitignore management for user configs
-    serverCount,
-    containerImagesPulled,
-    analysis: configUpdateResult.analysis,
-    directoryAnalysis,
-  };
-}
-
-/**
- * Install for all enabled hosts in user configuration
- */
-export async function installForAllEnabledUserHosts(
-  options: BulkUserInstallOptions
-): Promise<BulkInstallResult> {
-  const { config, userDir, logger, force = false } = options;
-
-  // Get enabled hosts from user configuration
-  const enabledHosts = getEnabledHosts(config);
-
-  // Filter to only user-capable hosts
-  const userCapableHosts = enabledHosts.filter(host => {
-    const hostConfig = HOST_CONFIGS[host];
-    return (
-      hostConfig.userConfigPath && hostConfig.userMcpConfigUpdaterWithAnalysis
-    );
-  });
-
-  // Warn about non-user-capable hosts
-  const nonUserCapableHosts = enabledHosts.filter(host => {
-    const hostConfig = HOST_CONFIGS[host];
-    return (
-      !hostConfig.userConfigPath || !hostConfig.userMcpConfigUpdaterWithAnalysis
-    );
-  });
-
-  for (const host of nonUserCapableHosts) {
-    logger?.warn(
-      `Skipping host '${host}' - does not support user-level configuration`
-    );
-    logger?.warn(`Host '${host}' can only be configured at the project level`);
-  }
-
-  // Initialize result aggregation
-  const results: Record<string, InstallResult> = {};
-  let totalServers = 0;
-  let filesCreated = 0;
-  let filesUpdated = 0;
-
-  // Install for each user-capable enabled host
-  for (const host of userCapableHosts) {
-    const installOptions: UserInstallOptions = {
-      host,
-      config,
-      userDir,
-      force,
-      ...(logger && { logger }),
-    };
-
-    const result = await installForUserHost(installOptions);
-
-    results[host] = result;
-    totalServers += result.serverCount;
-
-    if (result.wasCreated) {
-      filesCreated++;
-    } else {
-      filesUpdated++;
-    }
-  }
-
-  return {
-    results: results as Record<SupportedHostV1, InstallResult>,
-    enabledHosts: userCapableHosts,
     totalServers,
     filesCreated,
     filesUpdated,

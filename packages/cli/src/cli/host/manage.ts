@@ -2,34 +2,34 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { getConfigPath } from "../../config/types/index.js";
 import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
 import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
-import { isUserMode } from "../_globals.js";
 import {
   applyHostChanges,
   getEnabledHostsDisplay,
   promptMultiHostToggle,
 } from "../_utils/multi-host-toggle.js";
-import { withProjectConfigAndErrorHandling } from "../_utils/with-project-config-and-error-handling.js";
-import { withUserConfigAndErrorHandling } from "../_utils/with-user-config-and-error-handling.js";
+import { withConfigContextAndErrorHandling } from "../_utils/with-config-context-and-error-handling.js";
 
 import type {
   SettingsProject,
   SettingsUser,
+  WorkspaceContext,
 } from "../../config/types/index.js";
 
 /**
- * Shared logic for host manage functionality that works with both project and user configs
+ * Unified logic for host manage functionality using workspace context
  */
 async function hostManageLogic(
-  config: SettingsProject | SettingsUser,
-  configPath: string,
-  isUserConfig: boolean
+  context: WorkspaceContext,
+  config: SettingsProject | SettingsUser
 ): Promise<void> {
   try {
     CLI_LOGGER.info("Starting interactive host management...");
 
+    const isUserConfig = context.workspaceType === "user";
     const currentlyEnabled = getEnabledHostsDisplay(config, isUserConfig);
     if (currentlyEnabled.length > 0) {
       CLI_LOGGER.info(`Currently enabled: ${currentlyEnabled.join(", ")}`);
@@ -37,7 +37,7 @@ async function hostManageLogic(
       CLI_LOGGER.info("No hosts currently enabled");
     }
 
-    const configType = isUserConfig ? "user" : "project";
+    const configType = context.workspaceType;
     const result = await promptMultiHostToggle(config, {
       message: `Select which MCP hosts should be enabled in ${configType} configuration:`,
       helpText:
@@ -62,6 +62,7 @@ async function hostManageLogic(
     const updatedConfig = applyHostChanges(config, result.changes);
 
     // Write back to file
+    const configPath = getConfigPath(context);
     if (isUserConfig) {
       await writeSettingsUserToFile(configPath, updatedConfig as SettingsUser);
     } else {
@@ -165,23 +166,5 @@ Use spacebar to toggle hosts, arrow keys to navigate, and Enter to confirm.
 Press Escape or Ctrl+C to cancel without making changes.
       `
     )
-    .action(async () => {
-      const isUserModeActive = isUserMode();
-
-      if (isUserModeActive) {
-        // Use user config wrapper
-        await withUserConfigAndErrorHandling(
-          async (config, _userDir, configPath) => {
-            await hostManageLogic(config, configPath, true);
-          }
-        )();
-      } else {
-        // Use project config wrapper
-        await withProjectConfigAndErrorHandling(
-          async (config, _projectDir, configPath) => {
-            await hostManageLogic(config, configPath, false);
-          }
-        )();
-      }
-    });
+    .action(withConfigContextAndErrorHandling(hostManageLogic));
 }

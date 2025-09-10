@@ -26,19 +26,18 @@ describe("resolveSandboxConfig", () => {
     log: "/log" as ResolvedPath,
     config: "/config" as ResolvedPath,
     temp: "/tmp" as ResolvedPath,
-    user: "/home/user/.mcpadre" as ResolvedPath,
   };
 
   const defaultConfig: SandboxConfig = {
     enabled: true,
     networking: true,
-    omitProjectPath: false,
+    omitWorkspacePath: false,
     allowRead: [],
     allowReadWrite: [],
   };
 
   describe("basic functionality", () => {
-    it("should include workspace path when omitProjectPath is false", () => {
+    it("should include workspace path when omitWorkspacePath is false", () => {
       const result = resolveSandboxConfig({
         config: defaultConfig,
         directoryResolver: mockDirectoryResolver,
@@ -48,9 +47,9 @@ describe("resolveSandboxConfig", () => {
       expect(result.allowRead).toContain("/workspace");
     });
 
-    it("should not include workspace path when omitProjectPath is true", () => {
+    it("should not include workspace path when omitWorkspacePath is true", () => {
       const result = resolveSandboxConfig({
-        config: { ...defaultConfig, omitProjectPath: true },
+        config: { ...defaultConfig, omitWorkspacePath: true },
         directoryResolver: mockDirectoryResolver,
         parentEnv: {},
       });
@@ -311,7 +310,7 @@ describe("resolveSandboxConfig", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: true,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: ["/server/read" as PathStringTemplate],
         allowReadWrite: ["/server/write" as PathStringTemplate],
       };

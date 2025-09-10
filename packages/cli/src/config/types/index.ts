@@ -32,3 +32,4 @@ export {
   UserOptionsV1 as UserOptions,
   WorkspaceAndServerSharedOptionsV1 as WorkspaceAndServerSharedOptions,
 } from "./v1/index.js";
+export * from "./workspace.js";

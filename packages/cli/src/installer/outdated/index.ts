@@ -28,7 +28,6 @@ import { auditNpmPackage, checkNpmOutdated } from "./npm-detector.js";
 import { auditPythonPackage, checkPypiOutdated } from "./pypi-detector.js";
 
 import type { SettingsBase } from "../../config/types/index.js";
-import type { ResolvedPath } from "../../runner/types/index.js";
 import type {
   OutdatedCheckOptions,
   OutdatedCheckResult,
@@ -165,11 +164,32 @@ async function checkSingleServer(
   isUserMode = false
 ): Promise<OutdatedServerInfo> {
   const serverType = getServerType(server);
-  const serverDir = getServerDirectoryPath(
-    serverName,
-    workingDir as ResolvedPath,
+
+  // Create a temporary WorkspaceContext for compatibility
+  const emptyConfig = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  const tempContext: import("../../config/types/index.js").WorkspaceContext =
     isUserMode
-  );
+      ? {
+          workspaceType: "user",
+          workspaceDir: workingDir,
+          mergedConfig: emptyConfig,
+          userConfig: emptyConfig,
+        }
+      : {
+          workspaceType: "project",
+          workspaceDir: workingDir,
+          mergedConfig: emptyConfig,
+          projectConfig: emptyConfig,
+          userConfig: undefined,
+        };
+
+  const serverDir = getServerDirectoryPath(tempContext, serverName);
 
   logger.debug(`Checking ${serverName} (${serverType}) for updates`);
 

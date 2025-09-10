@@ -3,6 +3,7 @@
 import { readdir } from "fs/promises";
 import { join } from "path";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { HostConfigSpec } from "../updaters/generic-updater.js";
 
 /**
@@ -208,17 +209,14 @@ export function classifyServers(
  * @returns Analysis of server directories
  */
 export async function analyzeServerDirectories(
-  projectDir: string,
-  mcpadreServerNames: Set<string>,
-  isUserMode = false
+  context: WorkspaceContext,
+  mcpadreServerNames: Set<string>
 ): Promise<ServerDirectoryAnalysis> {
   const result: ServerDirectoryAnalysis = {
     orphanedDirectories: [],
   };
 
-  const serversDir = isUserMode
-    ? join(projectDir, "servers")
-    : join(projectDir, ".mcpadre", "servers");
+  const serversDir = join(context.workspaceDir, ".mcpadre", "servers");
 
   try {
     const entries = await readdir(serversDir, { withFileTypes: true });

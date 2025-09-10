@@ -49,9 +49,7 @@ export async function createUserConfig(
 /**
  * Creates a complete temporary user environment with config
  */
-export async function createTempUserEnvironment(
-  config: SettingsUser
-): Promise<{
+export async function createTempUserEnvironment(config: SettingsUser): Promise<{
   userDir: string;
   configPath: string;
   cleanup: () => Promise<void>;
@@ -152,7 +150,7 @@ export const TEST_MULTI_SERVER_CONFIG: SettingsUser = {
 };
 
 /**
- * Verifies that files exist in user directory structure
+ * Verifies that files exist in user directory structure (unified approach)
  */
 export async function verifyUserModeFiles(
   userDir: string,
@@ -160,7 +158,7 @@ export async function verifyUserModeFiles(
   expectedFiles: string[]
 ): Promise<boolean> {
   const fs = await import("fs/promises");
-  const serverPath = join(userDir, "servers", serverName);
+  const serverPath = join(userDir, ".mcpadre", "servers", serverName);
 
   try {
     // Check if server directory exists
@@ -313,12 +311,10 @@ export function skipIfDockerUnavailable(): void {
 export async function createMockServerInstallation(
   baseDir: string,
   serverName: string,
-  isUserMode: boolean,
   files: { name: string; content: string }[] = []
 ): Promise<string> {
-  const serverDir = isUserMode
-    ? join(baseDir, "servers", serverName)
-    : join(baseDir, ".mcpadre", "servers", serverName);
+  // With unified approach, both user and project modes use .mcpadre/servers
+  const serverDir = join(baseDir, ".mcpadre", "servers", serverName);
 
   await mkdir(serverDir, { recursive: true });
 

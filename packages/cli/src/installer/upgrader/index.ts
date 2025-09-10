@@ -21,8 +21,12 @@ import { upgradeDockerServer } from "./docker-upgrader.js";
 import { upgradeNodeServer } from "./node-upgrader.js";
 import { upgradePythonServer } from "./python-upgrader.js";
 
-import type { SettingsBase } from "../../config/types/index.js";
-import type { ResolvedPath } from "../../runner/types/index.js";
+import type {
+  SettingsBase,
+  SettingsProject,
+  SettingsUser,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 import type {
   DockerUpgradeOptions,
   NodeUpgradeOptions,
@@ -48,6 +52,23 @@ export async function upgradeServers(
   logger.debug(
     `Options: upgradeAll=${options.upgradeAll}, serverNames=[${options.serverNames.join(",")}], skipAudit=${options.skipAudit}`
   );
+
+  // Create WorkspaceContext for compatibility with container manager
+  const context: WorkspaceContext =
+    mode === "user"
+      ? {
+          workspaceType: "user",
+          workspaceDir: workingDir,
+          mergedConfig: config as SettingsProject,
+          userConfig: config as SettingsUser,
+        }
+      : {
+          workspaceType: "project",
+          workspaceDir: workingDir,
+          mergedConfig: config as SettingsProject,
+          projectConfig: config as SettingsProject,
+          userConfig: undefined,
+        };
 
   const warnings: UpgradeWarning[] = [];
 
@@ -127,11 +148,7 @@ export async function upgradeServers(
 
     // Upgrade each server individually
     for (const server of serversToUpgrade) {
-      const serverDir = getServerDirectoryPath(
-        server.serverName,
-        workingDir as ResolvedPath,
-        mode === "user"
-      );
+      const serverDir = getServerDirectoryPath(context, server.serverName);
 
       try {
         // Get the server config to extract package/image information
@@ -219,7 +236,7 @@ export async function upgradeServers(
               }),
             };
 
-            result = await upgradeDockerServer(dockerOptions, logger);
+            result = await upgradeDockerServer(dockerOptions, context, logger);
             break;
           }
 

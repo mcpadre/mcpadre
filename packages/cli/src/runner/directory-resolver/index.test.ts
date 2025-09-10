@@ -7,6 +7,26 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createDirectoryResolver } from "./index.js";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    mergedConfig: config,
+    projectConfig: config,
+    userConfig: undefined,
+  };
+}
+
 describe("createDirectoryResolver", () => {
   let testDir: string;
 
@@ -25,7 +45,9 @@ describe("createDirectoryResolver", () => {
   });
 
   it("should resolve all standard directories", () => {
-    const resolver = createDirectoryResolver();
+    const resolver = createDirectoryResolver(
+      createTestWorkspaceContext(testDir)
+    );
 
     expect(resolver.home).toBeDefined();
     expect(resolver.config).toBeDefined();
@@ -46,13 +68,17 @@ describe("createDirectoryResolver", () => {
   });
 
   it("should use OS home directory for home path", () => {
-    const resolver = createDirectoryResolver();
+    const resolver = createDirectoryResolver(
+      createTestWorkspaceContext(testDir)
+    );
 
     expect(resolver.home as string).toBe(homedir());
   });
 
-  it("should default workspace to current working directory when no path provided", () => {
-    const resolver = createDirectoryResolver();
+  it("should use current working directory when specified", () => {
+    const resolver = createDirectoryResolver(
+      createTestWorkspaceContext(process.cwd())
+    );
 
     expect(resolver.workspace as string).toBe(process.cwd());
   });
@@ -61,7 +87,9 @@ describe("createDirectoryResolver", () => {
     const workspaceDir = join(testDir, "workspace");
     await mkdir(workspaceDir);
 
-    const resolver = createDirectoryResolver(workspaceDir);
+    const resolver = createDirectoryResolver(
+      createTestWorkspaceContext(workspaceDir)
+    );
 
     expect(resolver.workspace as string).toBe(workspaceDir);
   });
@@ -69,19 +97,23 @@ describe("createDirectoryResolver", () => {
   it("should throw error when workspace path doesn't exist", () => {
     const nonExistentPath = join(testDir, "non-existent");
 
-    expect(() => createDirectoryResolver(nonExistentPath)).toThrow(
-      `Workspace path does not exist: ${nonExistentPath}`
-    );
+    expect(() =>
+      createDirectoryResolver(createTestWorkspaceContext(nonExistentPath))
+    ).toThrow(`Workspace directory does not exist: ${nonExistentPath}`);
   });
 
-  it("should handle null workspace path", () => {
-    const resolver = createDirectoryResolver(null);
+  it("should use current working directory when specified", () => {
+    const resolver = createDirectoryResolver(
+      createTestWorkspaceContext(process.cwd())
+    );
 
     expect(resolver.workspace as string).toBe(process.cwd());
   });
 
   it("should resolve parent directories from env-paths", () => {
-    const resolver = createDirectoryResolver();
+    const resolver = createDirectoryResolver(
+      createTestWorkspaceContext(testDir)
+    );
 
     // These should be parent directories, not app-specific ones
     // We can't test exact paths since they're platform-specific,
@@ -94,7 +126,9 @@ describe("createDirectoryResolver", () => {
   });
 
   it("should preserve branding through the resolver", () => {
-    const resolver = createDirectoryResolver();
+    const resolver = createDirectoryResolver(
+      createTestWorkspaceContext(testDir)
+    );
 
     // The branded types should work with type system
     // We can't directly test the branding, but we can verify the structure
