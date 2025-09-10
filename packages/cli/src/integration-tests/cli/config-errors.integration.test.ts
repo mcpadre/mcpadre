@@ -34,7 +34,7 @@ command: ["broken"]  # Wrong indentation
 
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
-          const stderr = result.stderr;
+          const stderr = String(result.stderr ?? "");
           const hasValidationError = stderr.includes(
             "Settings validation failed"
           );
@@ -70,7 +70,7 @@ mcpServers:
 
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
-          const stderr = result.stderr;
+          const stderr = String(result.stderr ?? "");
           const hasValidationError = stderr.includes(
             "Settings validation failed"
           );
@@ -111,7 +111,7 @@ mcpServers:
 
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
-          const stderr = result.stderr;
+          const stderr = String(result.stderr ?? "");
           const hasValidationError = stderr.includes(
             "Settings validation failed"
           );
@@ -139,7 +139,7 @@ mcpServers:
           });
 
           expect(result.exitCode).toBe(1);
-          expect(result.stderr).toContain(
+          expect(String(result.stderr ?? "")).toContain(
             "Required file or directory not found"
           );
         } finally {
@@ -164,7 +164,7 @@ mcpServers:
 
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
-          const stderr = result.stderr;
+          const stderr = String(result.stderr ?? "");
           const hasValidationError = stderr.includes(
             "Settings validation failed"
           );
@@ -202,7 +202,7 @@ mcpServers:
 
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
-          const stderr = result.stderr;
+          const stderr = String(result.stderr ?? "");
           const hasValidationError = stderr.includes(
             "Settings validation failed"
           );
@@ -239,7 +239,7 @@ mcpServers:
 
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
-          const stderr = result.stderr;
+          const stderr = String(result.stderr ?? "");
           const hasValidationError = stderr.includes(
             "Settings validation failed"
           );
