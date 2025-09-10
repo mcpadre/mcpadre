@@ -6,7 +6,7 @@ import type { ConfigValidation } from "./types.js";
 // Safely import config functions
 async function importConfigLoaders(): Promise<{
   findProjectConfig: (startDir?: string) => Promise<string | null>;
-  findUserConfig: () => Promise<string | null>;
+  findUserConfig: (userDir: string) => Promise<string | null>;
   loadAndValidateSettingsProject: (filePath: string) => Promise<unknown>;
   loadAndValidateSettingsUser: (filePath: string) => Promise<unknown>;
 }> {
@@ -89,10 +89,14 @@ async function validateUserConfig(): Promise<ConfigValidation["userConfig"]> {
     const { findUserConfig, loadAndValidateSettingsUser } =
       await importConfigLoaders();
 
+    // Import getUserDir dynamically for diagnostics
+    const { getUserDir } = await import("../cli/_globals.js");
+    const userDir = getUserDir();
+
     // Check if user config exists
     let configPath: string | null = null;
     try {
-      configPath = await findUserConfig();
+      configPath = await findUserConfig(userDir);
     } catch (findError) {
       // User config directory might not exist
       return {

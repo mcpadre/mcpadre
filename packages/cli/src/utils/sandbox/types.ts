@@ -34,8 +34,8 @@ export interface SandboxConfig {
   enabled: boolean;
   /** Whether to allow network access */
   networking: boolean;
-  /** Whether to omit the project path from the sandbox */
-  omitProjectPath: boolean;
+  /** Whether to omit the workspace path from the sandbox */
+  omitWorkspacePath: boolean;
   /** Template paths with read-execute permissions (unresolved) */
   allowRead: string[];
   /** Template paths with read-write-execute permissions (unresolved) */

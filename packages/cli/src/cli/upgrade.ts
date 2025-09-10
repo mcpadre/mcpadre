@@ -9,12 +9,14 @@ import {
   isInteractiveEnvironment,
   promptForConfirmation,
 } from "./_utils/interactive-prompts.js";
-import { withProjectConfigAndErrorHandling } from "./_utils/with-project-config-and-error-handling.js";
-import { withUserConfigAndErrorHandling } from "./_utils/with-user-config-and-error-handling.js";
+import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
-import { isUserMode } from "./_globals.js";
 
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
+import type {
+  SettingsProject,
+  SettingsUser,
+  WorkspaceContext,
+} from "../config/types/index.js";
 import type { UpgradeOptions } from "../installer/upgrader/types.js";
 
 interface UpgradeCommandOptions {
@@ -54,58 +56,28 @@ Examples:
     .option("--all", "Upgrade all outdated servers", false)
     .option("--yes", "Skip confirmation prompts", false)
     .option("--skip-audit", "Skip post-upgrade security audits", false)
-    .action((serverNames, options) => {
-      const userMode = isUserMode();
-
-      if (userMode) {
-        // User-level upgrade
-        return withUserConfigAndErrorHandling((config, userDir, configPath) =>
-          handleUserUpgrade(config, userDir, configPath, serverNames, options)
-        )();
-      } else {
-        // Project-level upgrade
-        return withProjectConfigAndErrorHandling(
-          (config, projectDir, configPath) =>
-            handleProjectUpgrade(
-              config,
-              projectDir,
-              configPath,
-              serverNames,
-              options
-            )
-        )();
-      }
-    });
+    .action(withConfigContextAndErrorHandling(handleUpgrade));
 }
 
 /**
- * Handle user-level upgrade
+ * Handle upgrade for both user and project modes
  */
-async function handleUserUpgrade(
-  config: SettingsUser,
-  userDir: string,
-  _configPath: string,
+async function handleUpgrade(
+  context: WorkspaceContext,
+  config: SettingsProject | SettingsUser,
   serverNames: string[],
   options: UpgradeCommandOptions
 ): Promise<void> {
-  CLI_LOGGER.info("Upgrading user servers...");
+  const mode = context.workspaceType === "user" ? "user" : "project";
+  CLI_LOGGER.info(`Upgrading ${mode} servers...`);
 
-  await runUpgradeLogic(config, userDir, serverNames, options, "user");
-}
-
-/**
- * Handle project-level upgrade
- */
-async function handleProjectUpgrade(
-  config: SettingsProject,
-  projectDir: string,
-  _configPath: string,
-  serverNames: string[],
-  options: UpgradeCommandOptions
-): Promise<void> {
-  CLI_LOGGER.info("Upgrading project servers...");
-
-  await runUpgradeLogic(config, projectDir, serverNames, options, "project");
+  await runUpgradeLogic(
+    config,
+    context.workspaceDir,
+    serverNames,
+    options,
+    mode
+  );
 }
 
 /**

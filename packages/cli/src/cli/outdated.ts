@@ -7,12 +7,14 @@ import Docker from "dockerode";
 
 import { checkAllOutdated } from "../installer/outdated/index.js";
 
-import { withProjectConfigAndErrorHandling } from "./_utils/with-project-config-and-error-handling.js";
-import { withUserConfigAndErrorHandling } from "./_utils/with-user-config-and-error-handling.js";
+import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
-import { isUserMode } from "./_globals.js";
 
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
+import type {
+  SettingsProject,
+  SettingsUser,
+  WorkspaceContext,
+} from "../config/types/index.js";
 import type {
   OutdatedCheckOptions,
   OutdatedServerInfo,
@@ -73,23 +75,7 @@ Examples:
       false
     )
     .option("--outdated-only", "Show only servers that are outdated", false)
-    .action((options, command) => {
-      const userMode = isUserMode();
-
-      if (userMode) {
-        // User-level outdated check
-        return withUserConfigAndErrorHandling(handleUserOutdated)(
-          options,
-          command
-        );
-      } else {
-        // Project-level outdated check
-        return withProjectConfigAndErrorHandling(handleProjectOutdated)(
-          options,
-          command
-        );
-      }
-    });
+    .action(withConfigContextAndErrorHandling(handleOutdated));
 }
 
 /**
@@ -100,33 +86,18 @@ function collectIntoArray(value: string, previous: string[]): string[] {
 }
 
 /**
- * Handle user-level outdated check
+ * Handle outdated check for both user and project modes
  */
-async function handleUserOutdated(
-  _config: SettingsUser,
-  userDir: string,
-  _configPath: string,
+async function handleOutdated(
+  context: WorkspaceContext,
+  _config: SettingsProject | SettingsUser,
   options: OutdatedCommandOptions,
   _command: Command
 ): Promise<void> {
-  CLI_LOGGER.info("Checking user servers for outdated packages...");
+  const mode = context.workspaceType === "user" ? "user" : "project";
+  CLI_LOGGER.info(`Checking ${mode} servers for outdated packages...`);
 
-  await runOutdatedLogic(userDir, options, "user");
-}
-
-/**
- * Handle project-level outdated check
- */
-async function handleProjectOutdated(
-  _config: SettingsProject,
-  projectDir: string,
-  _configPath: string,
-  options: OutdatedCommandOptions,
-  _command: Command
-): Promise<void> {
-  CLI_LOGGER.info("Checking project servers for outdated packages...");
-
-  await runOutdatedLogic(projectDir, options, "project");
+  await runOutdatedLogic(context.workspaceDir, options, mode);
 }
 
 /**
@@ -164,7 +135,8 @@ async function runOutdatedLogic(
       workingDir,
       docker,
       CLI_LOGGER,
-      checkOptions
+      checkOptions,
+      mode
     );
 
     // Apply filtering if requested

@@ -69,15 +69,15 @@ export function createSandbox(
  */
 export function createSandboxConfig(
   options: Partial<SandboxConfig> | undefined,
-  opts?: { isUserMode?: boolean }
+  opts?: { workspaceType?: "user" | "project" }
 ): SandboxConfig {
   // User servers default to disabled sandbox unless explicitly enabled
-  const defaultEnabled = opts?.isUserMode ? false : true;
+  const defaultEnabled = opts?.workspaceType === "user" ? false : true;
 
   return {
     enabled: options?.enabled ?? defaultEnabled,
     networking: options?.networking ?? true,
-    omitProjectPath: options?.omitProjectPath ?? false,
+    omitWorkspacePath: options?.omitWorkspacePath ?? false,
     allowRead: options?.allowRead ?? [],
     allowReadWrite: options?.allowReadWrite ?? [],
   };

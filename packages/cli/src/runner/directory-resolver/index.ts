@@ -4,9 +4,9 @@ import { existsSync } from "fs";
 import { homedir } from "os";
 import { dirname } from "path";
 
-import { getUserDir, getWorkspaceDir } from "../../cli/_globals.js";
 import { FileSystemError } from "../../utils/errors.js";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { ResolvedPath } from "../types/index.js";
 
 /**
@@ -25,36 +25,33 @@ export interface DirectoryResolver {
   log: ResolvedPath;
   /** Temporary directory (base path) */
   temp: ResolvedPath;
-  /** Workspace directory (if provided and exists) */
+  /** Workspace directory from context */
   workspace: ResolvedPath;
-  /** User directory from MCPADRE_USER_DIR or ~/.mcpadre */
-  user: ResolvedPath;
 }
 
 /**
  * Creates a directory resolver that provides access to standard system directories
- * and an optional workspace directory.
+ * using the workspace directory from the provided context.
  *
- * @param workspacePath - Optional workspace path to include in the resolver
+ * @param context - WorkspaceContext containing the workspace directory
  * @returns Object containing all resolved directory paths as branded strings
- * @throws Error if workspacePath is provided but doesn't exist
+ * @throws Error if workspace directory doesn't exist
  */
 export function createDirectoryResolver(
-  workspacePath?: string | null
+  context: WorkspaceContext
 ): DirectoryResolver {
   // Get base directories using env-paths, then use dirname to get parent directories
   const paths = envPaths("mcpadre");
 
-  // Use workspace directory override from CLI if available, then parameter, then cwd
-  const resolvedWorkspacePath =
-    getWorkspaceDir() ?? workspacePath ?? process.cwd();
+  // Use workspace directory from context
+  const workspaceDir = context.workspaceDir;
 
-  // Validate workspace path if provided
-  if (resolvedWorkspacePath && !existsSync(resolvedWorkspacePath)) {
+  // Validate workspace path exists
+  if (!existsSync(workspaceDir)) {
     throw new FileSystemError(
-      `Workspace path does not exist: ${resolvedWorkspacePath}`,
+      `Workspace directory does not exist: ${workspaceDir}`,
       "access",
-      resolvedWorkspacePath
+      workspaceDir
     );
   }
 
@@ -65,7 +62,6 @@ export function createDirectoryResolver(
     data: dirname(paths.data) as ResolvedPath,
     log: dirname(paths.log) as ResolvedPath,
     temp: dirname(paths.temp) as ResolvedPath,
-    workspace: resolvedWorkspacePath as ResolvedPath,
-    user: getUserDir() as ResolvedPath,
+    workspace: workspaceDir as ResolvedPath,
   };
 }

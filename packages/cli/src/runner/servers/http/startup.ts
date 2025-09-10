@@ -10,7 +10,6 @@ import { HttpMcpClient } from "./client.js";
 
 import type { HttpMcpServerV1 } from "../../../config/types/v1/server/index.js";
 import type { RunServerOptions } from "../../index.js";
-import type { ResolvedPath } from "../../types/index.js";
 
 /**
  * Configuration specific to HTTP server startup
@@ -25,27 +24,23 @@ interface HttpStartupConfig extends RunServerOptions {
 export async function startHttpServer(
   options: HttpStartupConfig
 ): Promise<void> {
-  const { serverName, serverConfig, projectConfig, logger } = options;
+  const { serverName, serverConfig, context, logger } = options;
   const httpServer = serverConfig;
+  const projectConfig = context.mergedConfig;
 
   // Set up common server environment (HTTP uses headers not env vars, but we still need directory resolver)
   const { directoryResolver } = await setupServerEnvironment({
+    context,
     envConfig: {}, // HTTP servers don't use environment variables
     logger,
   });
 
   // Create dedicated server logger for debugging MCP server communication
-  // Use user directory if in user mode, otherwise use workspace directory
-  const loggerBaseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : (directoryResolver.workspace as ResolvedPath);
-
   const serverLogger = await createServerLogger(
     serverName,
-    loggerBaseDir,
+    directoryResolver.workspace,
     "trace", // Use trace level to capture all our detailed debugging logs
-    options.isUserMode
+    context
   );
   logger.debug(
     { serverName, logLevel: "trace" },
@@ -89,6 +84,7 @@ export async function startHttpServer(
     serverName,
     directoryResolver,
     logger,
+    context,
   });
 
   logger.info(`Connected to ${connectionInfo}`);

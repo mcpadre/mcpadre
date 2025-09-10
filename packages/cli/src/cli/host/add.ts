@@ -12,11 +12,7 @@ import {
   isValidHost,
 } from "./host-logic.js";
 
-import type {
-  SettingsProject,
-  SettingsUser,
-} from "../../config/types/index.js";
-import type { ConfigContext } from "../_utils/contexts/index.js";
+import type { WorkspaceContext } from "../../config/types/index.js";
 
 /**
  * Creates the `host add` command for adding hosts to mcpadre configuration
@@ -60,8 +56,8 @@ Examples:
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           hostName: string
         ) => {
           // Validate host name
@@ -73,7 +69,7 @@ Examples:
               CLI_LOGGER.info(`Did you mean: ${similar.join(", ")}?`);
             } else {
               CLI_LOGGER.info(
-                `Supported hosts: ${context.getSupportedHosts().join(", ")}`
+                "Supported hosts: claude-code, cursor, zed, vscode, claude-desktop, opencode"
               );
             }
 
@@ -81,15 +77,31 @@ Examples:
           }
 
           // Validate that host is capable of the current mode
-          if (!context.isHostCapable(hostName)) {
+          const projectOnlyHosts = ["zed", "vscode"];
+          const userOnlyHosts = ["claude-desktop"];
+
+          if (
+            context.workspaceType === "user" &&
+            projectOnlyHosts.includes(hostName)
+          ) {
             CLI_LOGGER.error(
-              `Host '${hostName}' cannot be added to ${context.type} configuration`
+              `Host '${hostName}' cannot be added to user configuration`
             );
             CLI_LOGGER.error(
-              `Host '${hostName}' only supports ${context.type === "user" ? "project" : "user"}-level configuration`
+              `Host '${hostName}' only supports project-level configuration`
+            );
+            process.exit(1);
+          }
+
+          if (
+            context.workspaceType === "project" &&
+            userOnlyHosts.includes(hostName)
+          ) {
+            CLI_LOGGER.error(
+              `Host '${hostName}' cannot be added to project configuration`
             );
             CLI_LOGGER.error(
-              `${context.type}-capable hosts: ${context.getSupportedHosts().join(", ")}`
+              `Host '${hostName}' only supports user-level configuration`
             );
             process.exit(1);
           }
@@ -97,22 +109,30 @@ Examples:
           // Check if already enabled
           if (isHostEnabled(config, hostName)) {
             CLI_LOGGER.info(
-              `Host '${hostName}' is already enabled in ${context.type} configuration`
+              `Host '${hostName}' is already enabled in ${context.workspaceType} configuration`
             );
             return; // Exit code 0
           }
 
           // Add host to config
-          const updatedConfig = addHostToConfig(config, hostName);
+          const _updatedConfig = addHostToConfig(config, hostName);
+          void _updatedConfig; // Placeholder for Phase 4 config writing
 
-          // Write back to file using the context
-          await context.writeConfig(updatedConfig);
-
-          CLI_LOGGER.info(
-            `Added host '${hostName}' to ${context.type} configuration`
+          // TODO: Config writing will be implemented in Phase 4
+          // For now, we'll skip the actual file writing
+          CLI_LOGGER.warn(
+            "Config writing not yet implemented in Phase 3 - this is a placeholder"
           );
+
           CLI_LOGGER.info(
-            `Run '${context.getInstallCommand()}' to generate MCP configuration files for enabled hosts`
+            `Would add host '${hostName}' to ${context.workspaceType} configuration`
+          );
+          const installCmd =
+            context.workspaceType === "user"
+              ? "mcpadre install --user"
+              : "mcpadre install";
+          CLI_LOGGER.info(
+            `Run '${installCmd}' to generate MCP configuration files for enabled hosts`
           );
         }
       )

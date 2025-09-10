@@ -6,10 +6,8 @@ import { runMcpServer } from "../runner/index.js";
 
 import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
-import { getUserDir } from "./_globals.js";
 
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
-import type { ConfigContext } from "./_utils/contexts/index.js";
+import type { WorkspaceContext } from "../config/types/index.js";
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function makeRunCommand() {
@@ -23,11 +21,11 @@ export function makeRunCommand() {
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           serverName: string
         ) => {
-          const configType = context.getConfigTypeName();
+          const configType = context.workspaceType;
           CLI_LOGGER.info(`Starting ${configType} MCP server: ${serverName}`);
 
           // Extract named server from mcpServers config
@@ -40,24 +38,13 @@ export function makeRunCommand() {
             process.exit(1);
           }
 
-          // Common options for runMcpServer
-          const runOptions = {
+          // Run the MCP server with workspace context
+          await runMcpServer({
             serverName,
             serverConfig,
-            projectConfig: config as SettingsProject, // runMcpServer expects a SettingsProject
+            context,
             logger: CLI_LOGGER,
-          };
-
-          // Add user-specific options if in user mode
-          if (context.type === "user") {
-            await runMcpServer({
-              ...runOptions,
-              isUserMode: true,
-              userDir: getUserDir(),
-            });
-          } else {
-            await runMcpServer(runOptions);
-          }
+          });
         }
       )
     );

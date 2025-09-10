@@ -19,7 +19,6 @@ import { NodeMcpClient } from "./client.js";
 
 import type { NodeMcpServerV1 } from "../../../config/types/v1/server/index.js";
 import type { RunServerOptions } from "../../index.js";
-import type { ResolvedPath } from "../../types/index.js";
 
 /**
  * Configuration specific to Node.js server startup
@@ -256,8 +255,9 @@ function resolveNodeCachePaths(): string[] {
 export async function startNodeServer(
   options: NodeStartupConfig
 ): Promise<void> {
-  const { serverName, serverConfig, projectConfig, logger } = options;
+  const { serverName, serverConfig, context, logger } = options;
   const nodeServer = serverConfig;
+  const projectConfig = context.mergedConfig;
 
   // Guard against StdioMcpServerV1 variant without node property
   if (!("node" in nodeServer)) {
@@ -268,22 +268,13 @@ export async function startNodeServer(
 
   // Set up common server environment
   const { directoryResolver, envStringMap } = await setupServerEnvironment({
+    context,
     envConfig: nodeServer.env ?? {},
     logger,
   });
 
   // Get the server directory path where .node-version should be
-  // Use user directory if in user mode, otherwise use workspace directory
-  const baseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : directoryResolver.workspace;
-
-  const serverDir = getServerDirectoryPath(
-    serverName,
-    baseDir,
-    options.isUserMode
-  );
+  const serverDir = getServerDirectoryPath(context, serverName);
 
   logger.info(`Initializing Node.js server in directory: ${serverDir}`);
 
@@ -312,17 +303,11 @@ export async function startNodeServer(
   );
 
   // Create dedicated server logger for debugging MCP server communication
-  // Use user directory if in user mode, otherwise use workspace directory
-  const loggerBaseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : (directoryResolver.workspace as ResolvedPath);
-
   const serverLogger = await createServerLogger(
     serverName,
-    loggerBaseDir,
+    directoryResolver.workspace,
     "trace", // Use trace level to capture all our detailed debugging logs
-    options.isUserMode
+    context
   );
   logger.debug(
     { serverName, logLevel: "trace" },
@@ -362,7 +347,7 @@ export async function startNodeServer(
     ...(workspaceOptions && { workspaceOptions }),
     readPaths: allReadPaths, // Node.js-specific: add executables + version managers + Homebrew paths
     readWritePaths: nodeCachePaths, // Node.js-specific: add npm/pnpm cache paths
-    ...(options.isUserMode !== undefined && { isUserMode: options.isUserMode }),
+    context,
     logger,
   });
 
@@ -394,6 +379,7 @@ export async function startNodeServer(
     serverName,
     directoryResolver,
     logger,
+    context,
   });
 
   logger.info(`Connected to ${connectionInfo}`);

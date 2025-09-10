@@ -14,6 +14,7 @@ import {
   parsePyprojectToml,
 } from "./python-manager-logic.js";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { PythonOptionsV1 } from "../../config/types/v1/server/index.js";
 import type { Logger } from "pino";
 
@@ -25,8 +26,8 @@ export interface PythonInstallOptions {
   serverName: string;
   /** Python configuration from mcpadre config */
   python: PythonOptionsV1;
-  /** Base directory where .mcpadre is located */
-  projectDir: string;
+  /** Workspace context containing configuration and directory paths */
+  context: WorkspaceContext;
   /** Server directory path (.mcpadre/servers/$serverName) */
   serverDir: string;
   /** Logger instance */

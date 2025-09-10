@@ -84,7 +84,16 @@ export default tseslint.config(
       "prefer-const": "error",
       "no-var": "error",
       "object-shorthand": "error",
-      "prefer-template": "error"
+      "prefer-template": "error",
+
+      // Architecture enforcement - prevent isUserMode usage in CLI commands
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='isUserMode']",
+          message: "Use WorkspaceContext instead of calling isUserMode() - CLI commands should receive WorkspaceContext from withConfigContextAndErrorHandling"
+        }
+      ]
     }
   },
 
@@ -112,6 +121,17 @@ export default tseslint.config(
     files: ["**/cli.{ts,tsx}", "**/src/cli.{ts,tsx}"],
     rules: {
       "no-console": "off"
+    }
+  },
+
+  // Context infrastructure - allow isUserMode for context creation only
+  {
+    files: [
+      "**/with-config-base.ts",
+      "**/contexts/index.ts"
+    ],
+    rules: {
+      "no-restricted-syntax": "off"
     }
   }
 );

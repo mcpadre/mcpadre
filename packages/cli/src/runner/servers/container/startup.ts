@@ -45,8 +45,7 @@ async function resolveContainerVolumes(
   serverName: string,
   directoryResolver: DirectoryResolver,
   logger: typeof import("../../../cli/_deps.js").CLI_LOGGER,
-  isUserMode?: boolean,
-  userDir?: string
+  context: import("../../../config/types/index.js").WorkspaceContext
 ): Promise<{
   resolvedVolumes: Record<
     string,
@@ -62,13 +61,7 @@ async function resolveContainerVolumes(
   const volumePatternsToGitignore: string[] = [];
 
   // Create server directory (for volumes and logs)
-  // Use user directory if in user mode, otherwise use workspace directory
-  const baseDir =
-    isUserMode && userDir
-      ? (userDir as ResolvedPath)
-      : directoryResolver.workspace;
-
-  const logsDir = await createServerDirectory(serverName, baseDir, isUserMode);
+  const logsDir = await createServerDirectory(context, serverName);
 
   if (containerServer.container.volumes) {
     const templateVars = {
@@ -169,27 +162,23 @@ async function verifyContainerLock(
 export async function startContainerServer(
   options: ContainerStartupConfig
 ): Promise<void> {
-  const { serverName, serverConfig, projectConfig, logger } = options;
+  const { serverName, serverConfig, context, logger } = options;
   const containerServer = serverConfig;
+  const projectConfig = context.mergedConfig;
 
   // Set up common server environment
   const { directoryResolver, envStringMap } = await setupServerEnvironment({
+    context,
     envConfig: containerServer.env ?? {},
     logger,
   });
 
   // Create dedicated server logger for debugging MCP server communication
-  // Use user directory if in user mode, otherwise use workspace directory
-  const loggerBaseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : (directoryResolver.workspace as ResolvedPath);
-
   const serverLogger = await createServerLogger(
     serverName,
-    loggerBaseDir,
+    directoryResolver.workspace,
     "trace", // Use trace level to capture all our detailed debugging logs
-    options.isUserMode
+    context
   );
   logger.debug(
     { serverName, logLevel: "trace" },
@@ -246,7 +235,7 @@ export async function startContainerServer(
     sandboxConfig: containerServer.sandbox ?? {},
     directoryResolver,
     ...(workspaceOptions && { workspaceOptions }),
-    ...(options.isUserMode !== undefined && { isUserMode: options.isUserMode }),
+    context,
     logger,
   });
 
@@ -265,22 +254,11 @@ export async function startContainerServer(
     serverName,
     directoryResolver,
     logger,
-    options.isUserMode,
-    options.userDir
+    context
   );
 
   // Get server directory path for lock file verification
-  // Use user directory if in user mode, otherwise use workspace directory
-  const baseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : directoryResolver.workspace;
-
-  const serverDirPath = getServerDirectoryPath(
-    serverName,
-    baseDir,
-    options.isUserMode
-  );
+  const serverDirPath = getServerDirectoryPath(context, serverName);
 
   // Verify container lock file before starting
   await verifyContainerLock(containerServer, serverName, serverDirPath, logger);
@@ -326,6 +304,7 @@ export async function startContainerServer(
     serverName,
     directoryResolver,
     logger,
+    context,
   });
 
   logger.info(`Connected to ${connectionInfo}`);

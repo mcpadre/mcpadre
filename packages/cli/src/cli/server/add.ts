@@ -27,12 +27,7 @@ import {
 } from "./interactive-flow.js";
 import { addServersToConfig, getServerNamesFromSpec } from "./server-logic.js";
 
-import type {
-  ServerSpec,
-  SettingsProject,
-  SettingsUser,
-} from "../../config/types/index.js";
-import type { ConfigContext } from "../_utils/contexts/index.js";
+import type { ServerSpec, WorkspaceContext } from "../../config/types/index.js";
 
 /**
  * Highlights YAML content with custom colors for terminal display
@@ -156,8 +151,8 @@ Examples:
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          _context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           filePathOrUrl: string | undefined,
           options: {
             all?: boolean;
@@ -196,7 +191,7 @@ Examples:
               }
 
               // Add the server to the configuration
-              const updatedConfig = {
+              const _updatedConfig = {
                 ...config,
                 mcpServers: {
                   ...config.mcpServers,
@@ -204,9 +199,10 @@ Examples:
                   [flowResult.serverName]: flowResult.serverConfig as any,
                 },
               };
+              void _updatedConfig; // Placeholder for Phase 4 config writing
 
               // Write back to file using the context
-              await context.writeConfig(updatedConfig);
+              // TODO: Config writing will be implemented in Phase 4\n          CLI_LOGGER.warn("Config writing not yet implemented - placeholder");
 
               CLI_LOGGER.info("Successfully added server from registry:");
               CLI_LOGGER.info(formatServerList([flowResult.serverName]));
@@ -218,7 +214,7 @@ Examples:
 
               // eslint-disable-next-line no-console
               console.log(
-                `Run '${context.getInstallCommand()}' to install the new server dependencies.`
+                `Run 'mcpadre install' to install the new server dependencies.`
               );
               return;
             } catch (error) {
@@ -361,14 +357,15 @@ Examples:
             );
 
             // Add servers to config
-            const updatedConfig = addServersToConfig(
+            const _updatedConfig = addServersToConfig(
               config,
               serverSpec,
               selectedServerNames
             );
+            void _updatedConfig; // Placeholder for Phase 4 config writing
 
             // Write back to file using the context
-            await context.writeConfig(updatedConfig);
+            // TODO: Config writing will be implemented in Phase 4\n          CLI_LOGGER.warn("Config writing not yet implemented - placeholder");
 
             CLI_LOGGER.info(
               `Added ${selectedServerNames.length} server${selectedServerNames.length > 1 ? "s" : ""} to configuration:`

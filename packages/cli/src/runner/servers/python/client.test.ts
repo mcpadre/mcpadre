@@ -50,7 +50,6 @@ describe("PythonMcpClient", () => {
       data: "/test/data" as ResolvedPath,
       temp: "/test/temp" as ResolvedPath,
       log: "/test/log" as ResolvedPath,
-      user: "/home/test/.mcpadre" as ResolvedPath,
     };
     mockServerName = "test-server";
     mockSandboxConfig = {

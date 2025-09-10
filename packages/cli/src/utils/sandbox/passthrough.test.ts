@@ -7,7 +7,26 @@ import { createDirectoryResolver } from "../../runner/directory-resolver";
 import { PassthroughSandbox } from "./passthrough";
 import { resolveSandboxConfig } from "./resolver";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { SandboxConfig } from "./types";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    mergedConfig: config,
+    projectConfig: config,
+    userConfig: undefined,
+  };
+}
 
 // Mock getPlatform
 vi.mock("./platform", async () => {
@@ -33,12 +52,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: true,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: ["/usr/bin", "/lib"],
         allowReadWrite: ["/tmp"],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -57,12 +78,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -88,12 +111,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -118,12 +143,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: false,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -143,12 +170,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: false,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -168,12 +197,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -202,12 +233,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: false,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -227,12 +260,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -249,12 +284,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: false,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -273,12 +310,14 @@ describe("PassthroughSandbox", () => {
       const config: SandboxConfig = {
         enabled: false,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,

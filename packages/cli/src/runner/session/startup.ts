@@ -9,7 +9,7 @@ import {
 
 import { InteractiveSessionManager, type SessionConfig } from "./index.js";
 
-import type { SettingsProject } from "../../config/types/index.js";
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { McpServerV1 } from "../../config/types/v1/server/index.js";
 import type { createDirectoryResolver } from "../directory-resolver/index.js";
 
@@ -19,11 +19,11 @@ import type { createDirectoryResolver } from "../directory-resolver/index.js";
 export interface CreateSessionOptions {
   sessionConfig: SessionConfig;
   serverConfig: McpServerV1;
-  projectConfig: SettingsProject;
+  projectConfig: WorkspaceContext["mergedConfig"];
   serverName: string;
   directoryResolver: ReturnType<typeof createDirectoryResolver>;
   logger: typeof import("../../cli/_deps.js").CLI_LOGGER;
-  isUserMode?: boolean;
+  context: WorkspaceContext;
 }
 
 /**
@@ -38,9 +38,8 @@ export async function createSessionWithInterceptors(
     serverConfig,
     projectConfig,
     serverName,
-    directoryResolver,
     logger,
-    isUserMode = false,
+    context,
   } = options;
 
   // Check if MCP traffic logging should be enabled
@@ -50,14 +49,7 @@ export async function createSessionWithInterceptors(
   if (loggingEnabled) {
     logger.debug("MCP traffic logging enabled, setting up log file");
     try {
-      const baseDir = isUserMode
-        ? directoryResolver.user
-        : directoryResolver.workspace;
-      const logsDir = await createServerDirectory(
-        serverName,
-        baseDir,
-        isUserMode
-      );
+      const logsDir = await createServerDirectory(context, serverName);
       logFilePath = createLogFilePath(serverName, logsDir);
       logger.debug({ logFilePath }, "Created log file path for MCP traffic");
     } catch (error) {

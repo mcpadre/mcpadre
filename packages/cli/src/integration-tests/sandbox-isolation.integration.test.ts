@@ -12,7 +12,26 @@ import { createCommand } from "../utils/command";
 import { getPlatform, SandboxPlatform } from "../utils/sandbox/platform";
 import { resolveSandboxConfig } from "../utils/sandbox/resolver";
 
+import type { WorkspaceContext } from "../config/types/index.js";
 import type { SandboxConfig } from "../utils/sandbox/types";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    mergedConfig: config,
+    projectConfig: config,
+    userConfig: undefined,
+  };
+}
 
 // Helper to determine if sandbox tests should be skipped
 function shouldSkipSandboxTests(): boolean {
@@ -55,12 +74,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [tempDir],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(tempDir)
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -87,12 +108,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
         const config: SandboxConfig = {
           enabled: true,
           networking: false,
-          omitProjectPath: true,
+          omitWorkspacePath: true,
           allowRead: [tempDir], // Only allow temp dir, not restricted dir
           allowReadWrite: [],
         };
 
-        const directoryResolver = createDirectoryResolver();
+        const directoryResolver = createDirectoryResolver(
+          createTestWorkspaceContext(tempDir)
+        );
         const finalizedConfig = resolveSandboxConfig({
           config,
           directoryResolver,
@@ -128,12 +151,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [],
         allowReadWrite: [tempDir], // Should grant both read and write access
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(tempDir)
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -163,12 +188,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false, // Network disabled
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [tempDir],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(tempDir)
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -202,12 +229,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: true, // Network enabled
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [tempDir],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(tempDir)
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -252,12 +281,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
       // This test shows the contrast between network enabled/disabled by testing both
       const baseConfig = {
         enabled: true,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [tempDir],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(tempDir)
+      );
 
       // Test with networking disabled
       const noNetworkConfig = resolveSandboxConfig({
@@ -309,12 +340,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [tempDir],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(tempDir)
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -357,12 +390,14 @@ describe.skipIf(shouldSkipSandboxTests())("Sandbox Integration Tests", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [], // No explicit read paths
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext(tempDir)
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,

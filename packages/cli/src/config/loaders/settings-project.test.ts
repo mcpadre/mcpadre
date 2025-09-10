@@ -120,7 +120,7 @@ command = "node test-server.js"
               enabled: true,
               networking: false,
               omitSystemPaths: true,
-              omitProjectPath: false,
+              omitWorkspacePath: false,
               allowRead: ["/tmp" as PathStringTemplate],
               allowReadWrite: ["/tmp/output" as PathStringTemplate],
             },

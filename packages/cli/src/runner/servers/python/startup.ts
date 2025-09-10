@@ -19,7 +19,6 @@ import { PythonMcpClient } from "./client.js";
 
 import type { PythonMcpServerV1 } from "../../../config/types/v1/server/index.js";
 import type { RunServerOptions } from "../../index.js";
-import type { ResolvedPath } from "../../types/index.js";
 
 /**
  * Configuration specific to Python server startup
@@ -193,27 +192,19 @@ function resolvePythonUvCachePaths(): string[] {
 export async function startPythonServer(
   options: PythonStartupConfig
 ): Promise<void> {
-  const { serverName, serverConfig, projectConfig, logger } = options;
+  const { serverName, serverConfig, context, logger } = options;
   const pythonServer = serverConfig;
+  const projectConfig = context.mergedConfig;
 
   // Set up common server environment
   const { directoryResolver, envStringMap } = await setupServerEnvironment({
+    context,
     envConfig: pythonServer.env ?? {},
     logger,
   });
 
   // Get the server directory path where .python-version should be
-  // Use user directory if in user mode, otherwise use workspace directory
-  const baseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : directoryResolver.workspace;
-
-  const serverDir = getServerDirectoryPath(
-    serverName,
-    baseDir,
-    options.isUserMode
-  );
+  const serverDir = getServerDirectoryPath(context, serverName);
 
   logger.info(`Initializing Python server in directory: ${serverDir}`);
 
@@ -243,17 +234,11 @@ export async function startPythonServer(
   );
 
   // Create dedicated server logger for debugging MCP server communication
-  // Use user directory if in user mode, otherwise use workspace directory
-  const loggerBaseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : (directoryResolver.workspace as ResolvedPath);
-
   const serverLogger = await createServerLogger(
     serverName,
-    loggerBaseDir,
+    directoryResolver.workspace,
     "trace", // Use trace level to capture all our detailed debugging logs
-    options.isUserMode
+    context
   );
   logger.debug(
     { serverName, logLevel: "trace" },
@@ -293,7 +278,7 @@ export async function startPythonServer(
     ...(workspaceOptions && { workspaceOptions }),
     readPaths: allReadPaths, // Python-specific: add executables + version managers + Homebrew paths
     readWritePaths: uvCachePaths, // Python-specific: add UV cache paths
-    ...(options.isUserMode !== undefined && { isUserMode: options.isUserMode }),
+    context,
     logger,
   });
 
@@ -325,6 +310,7 @@ export async function startPythonServer(
     serverName,
     directoryResolver,
     logger,
+    context,
   });
 
   logger.info(`Connected to ${connectionInfo}`);
