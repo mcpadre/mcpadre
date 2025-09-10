@@ -26,24 +26,38 @@ describe("registry-server-generator", () => {
       });
     });
 
-    it("should throw error for unsupported registry types", () => {
-      expect(() => {
-        generateServerConfigFromRegistry({
-          serverName: "my-server",
-          registryType: "python" as any,
-          packageName: "requests",
-          version: "2.31.0",
-        });
-      }).toThrow("Python server generation not yet implemented");
+    it("should generate Python server config", () => {
+      const result = generateServerConfigFromRegistry({
+        serverName: "my-python-server",
+        registryType: "python",
+        packageName: "requests",
+        version: "2.31.0",
+      });
 
-      expect(() => {
-        generateServerConfigFromRegistry({
-          serverName: "my-server",
-          registryType: "container" as any,
-          packageName: "nginx",
-          version: "latest",
-        });
-      }).toThrow("Container server generation not yet implemented");
+      expect(result.serverName).toBe("my-python-server");
+      expect(result.serverConfig).toEqual({
+        python: {
+          package: "requests",
+          version: "2.31.0",
+        },
+      });
+    });
+
+    it("should generate Container server config", () => {
+      const result = generateServerConfigFromRegistry({
+        serverName: "my-container-server",
+        registryType: "container",
+        packageName: "nginx",
+        version: "latest",
+      });
+
+      expect(result.serverName).toBe("my-container-server");
+      expect(result.serverConfig).toEqual({
+        container: {
+          image: "nginx",
+          tag: "latest",
+        },
+      });
     });
 
     it("should throw error for completely invalid registry type", () => {

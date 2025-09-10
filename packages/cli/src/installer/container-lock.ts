@@ -281,8 +281,25 @@ export class ContainerLockManager {
     try {
       remoteDigest = await this.getRemoteDigest(image, options.tag);
     } catch (error: unknown) {
-      // If we can't check remote, be conservative and skip pull
       const message = error instanceof Error ? error.message : String(error);
+
+      // Both authentication errors (403) and rate limiting (401) should fail
+      // We cannot safely verify container integrity without remote digest checks
+      // This prevents potential security issues with unverified container images
+      const isAuthOrRateLimitError =
+        message.includes("401 Unauthorized") ||
+        message.includes("403 Forbidden");
+
+      if (isAuthOrRateLimitError) {
+        return {
+          shouldPull: false,
+          reason: `Cannot check remote digest: ${message}`,
+          isError: true,
+        };
+      }
+
+      // Other network errors (timeouts, DNS failures) are acceptable to skip
+      // Be conservative and skip pull for temporary network issues
       return {
         shouldPull: false,
         reason: `Cannot check remote digest: ${message}`,

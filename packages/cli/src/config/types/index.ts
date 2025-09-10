@@ -19,6 +19,7 @@ export {
   NodeMcpServerV1 as NodeMcpServer,
   NodeOptionsV1 as NodeOptions,
   ProjectOptionsV1 as ProjectOptions,
+  PythonMcpServerV1 as PythonMcpServer,
   SandboxOptionsV1 as SandboxOptions,
   ServerSpecV1 as ServerSpec,
   SettingsBaseV1 as SettingsBase,

@@ -101,7 +101,18 @@ export async function runRegistryServerAddFlow(
             return { serverName: "", serverConfig: {}, cancelled: true };
           }
 
-          if (result.action === "continue" && result.value) {
+          if (result.action === "back") {
+            // First prompt - escape should exit entirely
+            await stateMachine.transition("escape");
+            return { serverName: "", serverConfig: {}, cancelled: true };
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- discriminated union check
+          if (result.action === "continue") {
+            if (!result.value) {
+              CLI_LOGGER.error("Registry type selection returned no value");
+              return { serverName: "", serverConfig: {}, cancelled: true };
+            }
             flowData.registryType = result.value;
             const transitionResult = await stateMachine.transition(
               "continue",
