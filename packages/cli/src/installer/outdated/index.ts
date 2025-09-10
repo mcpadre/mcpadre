@@ -52,7 +52,7 @@ export async function checkAllOutdated(
     // Load appropriate configuration based on mode
     let settings: SettingsBase;
     if (mode === "user") {
-      const userConfigPath = await findUserConfig();
+      const userConfigPath = await findUserConfig(workingDir);
       if (!userConfigPath) {
         throw new Error("No user configuration found");
       }

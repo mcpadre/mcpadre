@@ -54,12 +54,22 @@ function mergeConfigs(
     return projectConfig;
   }
 
-  // For now, simple merge - project config takes precedence
-  // In the future, we might want more sophisticated merging
+  // Deep merge configuration with project taking precedence
   return {
-    ...userConfig,
-    ...projectConfig,
-    // Ensure project-specific options override user options
+    version: projectConfig.version,
+    // Handle optional env field
+    ...(projectConfig.env !== undefined ? { env: projectConfig.env } : {}),
+    // Merge mcpServers with project servers overriding user servers
+    mcpServers: {
+      ...userConfig.mcpServers,
+      ...projectConfig.mcpServers,
+    },
+    // Merge hosts with project hosts overriding user hosts
+    hosts: {
+      ...userConfig.hosts,
+      ...projectConfig.hosts,
+    },
+    // Merge options with project options overriding user options
     options: {
       ...userConfig.options,
       ...projectConfig.options,
