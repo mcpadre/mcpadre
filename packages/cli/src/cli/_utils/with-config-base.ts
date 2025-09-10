@@ -46,7 +46,7 @@ async function tryLoadUserConfig(): Promise<SettingsUser | undefined> {
 /**
  * Merges project and user configs, with project config taking precedence
  */
-function mergeConfigs(
+export function mergeConfigs(
   projectConfig: SettingsProject,
   userConfig?: SettingsUser
 ): SettingsProject {
