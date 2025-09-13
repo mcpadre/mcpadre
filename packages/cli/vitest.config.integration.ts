@@ -17,9 +17,9 @@ export default defineConfig({
     silent: "passed-only",
 
     // Longer timeouts for integration tests
-    testTimeout: 300000,
-    hookTimeout: 300000,
-    bail: 1,
+    testTimeout: 120000,
+    hookTimeout: 120000,
+    bail: Infinity,
 
     // Limit concurrent workers to reduce CPU contention
     pool: "threads",
