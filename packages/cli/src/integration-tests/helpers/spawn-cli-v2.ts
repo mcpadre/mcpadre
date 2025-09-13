@@ -17,6 +17,36 @@ import type {
 import type { ResultPromise } from "execa";
 
 /**
+ * Find a log message in JSONL (JSON Lines) output
+ * Parses each line as JSON and looks for the message in the 'msg' field
+ */
+export function findLogMessageInJSONL(
+  jsonlOutput: string,
+  message: string
+): boolean {
+  const lines = jsonlOutput.trim().split("\n");
+  for (const line of lines) {
+    // Skip empty lines
+    if (!line.trim()) {
+      continue;
+    }
+
+    try {
+      const logEntry = JSON.parse(line);
+      if (logEntry.msg?.includes(message)) {
+        return true;
+      }
+    } catch (error) {
+      // Non-JSON lines in JSONL output indicate a bug - log it for debugging
+      console.warn(`Non-JSON line found in JSONL output: ${line}`);
+      console.warn(`Parse error: ${error}`);
+      // Continue processing other lines rather than failing completely
+    }
+  }
+  return false;
+}
+
+/**
  * Type for the spawn function provided to withProcess test functions
  */
 export type SpawnFunction = (

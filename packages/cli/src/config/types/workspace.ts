@@ -17,12 +17,14 @@ interface WorkspaceContextBase {
 export interface ProjectWorkspaceContext extends WorkspaceContextBase {
   workspaceType: "project";
   projectConfig: SettingsProjectV1;
-  userConfig?: SettingsUserV1 | undefined; // Optional user augmentation
+  projectConfigPath: string; // Path to the loaded mcpadre.yaml
+  userConfig: SettingsUserV1; // Optional user augmentation, null if not present
 }
 
 export interface UserWorkspaceContext extends WorkspaceContextBase {
   workspaceType: "user";
   userConfig: SettingsUserV1;
+  userConfigPath: string; // User config is required in this context
   // NOTE: By design, user context CANNOT have projectConfig
 }
 

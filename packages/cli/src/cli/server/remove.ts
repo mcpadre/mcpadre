@@ -2,6 +2,9 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { getConfigPath } from "../../config/types/workspace.js";
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
 import {
   CommonArguments,
@@ -104,15 +107,16 @@ export function makeServerRemoveCommand() {
           }
 
           // Remove server from config
-          const _updatedConfig = removeServerFromConfig(config, serverName);
-          void _updatedConfig; // Placeholder for Phase 4 config writing
+          const updatedConfig = removeServerFromConfig(config, serverName);
 
-          // Write back to file using the context
-          // TODO: Config writing will be implemented in Phase 4\n          CLI_LOGGER.warn("Config writing not yet implemented - placeholder");
+          // Write updated config back to file
+          const configPath = getConfigPath(context);
+          if (context.workspaceType === "user") {
+            await writeSettingsUserToFile(configPath, updatedConfig);
+          } else {
+            await writeSettingsProjectToFile(configPath, updatedConfig);
+          }
 
-          CLI_LOGGER.info(
-            `Would remove server '${serverName}' from ${context.workspaceType} configuration`
-          );
           // eslint-disable-next-line no-console
           console.log(`Successfully removed server: ${serverName}`);
         }

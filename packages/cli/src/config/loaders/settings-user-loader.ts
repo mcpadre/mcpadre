@@ -70,13 +70,11 @@ export async function findUserConfig(userDir: string): Promise<string | null> {
     "mcpadre.toml",
   ];
 
-  // Check if user directory exists
+  // Check if user directory exists. If not, no config can be found.
   try {
     await access(userDir, constants.F_OK);
   } catch {
-    throw new ConfigurationError(
-      `User configuration directory does not exist: ${userDir}`
-    );
+    return null; // Directory does not exist, so no config file can be found
   }
 
   const foundConfigs: string[] = [];
@@ -127,7 +125,7 @@ export async function loadAndValidateSettingsUser(
  * Returns the configuration and the path where it was found
  * If no config file exists, synthesizes a default empty configuration
  */
-export async function loadUserConfig(userDir: string): Promise<{
+export async function loadUserConfigOrDefault(userDir: string): Promise<{
   config: SettingsUser;
   configPath: string | null;
 }> {

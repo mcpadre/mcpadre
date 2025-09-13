@@ -57,7 +57,7 @@ export class McpTrafficLogger implements Interceptor {
   ): Promise<InterceptorRequestResult> {
     try {
       const logEntry: McpTrafficRequestLogEntry = {
-        timestamp: new Date().toISOString(),
+        time: new Date().toISOString(),
         id: request.id,
         req: request,
       };
@@ -88,7 +88,7 @@ export class McpTrafficLogger implements Interceptor {
   ): Promise<InterceptorResponseResult> {
     try {
       const logEntry: McpTrafficResponseLogEntry = {
-        timestamp: new Date().toISOString(),
+        time: new Date().toISOString(),
         id: response.id,
         res: response,
       };

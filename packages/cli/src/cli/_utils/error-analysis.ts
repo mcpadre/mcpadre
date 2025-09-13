@@ -431,8 +431,70 @@ export function analyzeError(error: unknown): AnalyzedError {
     };
   }
 
+  // JSON/YAML/TOML parsing errors
+  if (
+    errorString.includes("json") &&
+    (errorString.includes("unexpected") ||
+      errorString.includes("expected") ||
+      errorString.includes("syntax") ||
+      error instanceof SyntaxError)
+  ) {
+    return {
+      category: "validation",
+      userMessage: "Settings validation failed",
+      technicalMessage: errorMessage,
+      suggestions: [
+        "Check your configuration file for JSON syntax errors",
+        "Verify all brackets, braces, and quotes are properly closed",
+        "Remove any trailing commas in JSON files",
+        "Use a JSON validator to check file syntax",
+      ],
+    };
+  }
+
+  if (
+    errorString.includes("yaml") &&
+    (errorString.includes("unexpected") ||
+      errorString.includes("expected") ||
+      errorString.includes("syntax"))
+  ) {
+    return {
+      category: "validation",
+      userMessage: "Settings validation failed",
+      technicalMessage: errorMessage,
+      suggestions: [
+        "Check your configuration file for YAML syntax errors",
+        "Verify proper indentation (use spaces, not tabs)",
+        "Check that lists and mappings are properly formatted",
+        "Use a YAML validator to check file syntax",
+      ],
+    };
+  }
+
+  if (
+    errorString.includes("toml") &&
+    (errorString.includes("unexpected") ||
+      errorString.includes("expected") ||
+      errorString.includes("syntax"))
+  ) {
+    return {
+      category: "validation",
+      userMessage: "Settings validation failed",
+      technicalMessage: errorMessage,
+      suggestions: [
+        "Check your configuration file for TOML syntax errors",
+        "Verify proper key-value pair formatting",
+        "Check that strings are properly quoted",
+        "Use a TOML validator to check file syntax",
+      ],
+    };
+  }
+
   // Configuration/validation errors
-  if (errorString.includes("no mcpadre configuration file found")) {
+  if (
+    errorString.includes("no mcpadre configuration file found") ||
+    errorString.includes("no mcpadre project configuration file found")
+  ) {
     return {
       category: "configuration",
       userMessage: "No mcpadre configuration file found",

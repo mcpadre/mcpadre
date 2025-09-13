@@ -2,6 +2,7 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { HOST_CONFIGS } from "../../installer/config/host-configs.js";
 import { CLI_LOGGER } from "../_deps.js";
 import {
@@ -74,8 +75,6 @@ export function makeHostRemoveCommand() {
             process.exit(1);
           }
 
-          // Skip validation for remove - we'll just check if it's present
-
           // Check if host is not present
           if (!isHostEnabled(config, hostName)) {
             CLI_LOGGER.info(
@@ -85,21 +84,28 @@ export function makeHostRemoveCommand() {
           }
 
           // Remove host from config
-          const _updatedConfig = removeHostFromConfig(config, hostName);
-          void _updatedConfig; // Placeholder for Phase 4 config writing
+          const updatedConfig = removeHostFromConfig(config, hostName);
 
-          // TODO: Config writing will be implemented in Phase 4
-          CLI_LOGGER.warn("Config writing not yet implemented - placeholder");
+          // Write the updated configuration back to the file
+          if (context.workspaceType === "user") {
+            await writeSettingsUserToFile(
+              context.userConfigPath,
+              updatedConfig
+            );
+          } else {
+            // TODO: Implement project config writing
+            // await writeSettingsProjectToFile(context.projectConfigPath, updatedConfig);
+            CLI_LOGGER.warn("Project config writing not yet implemented.");
+          }
 
           CLI_LOGGER.info(
-            `Would remove host '${hostName}' from ${context.workspaceType} configuration`
+            `Removed host '${hostName}' from ${context.workspaceType} configuration`
           );
 
           // Get the config file path for this host
           const hostConfig = HOST_CONFIGS[hostName];
 
           // Only reference config path for project mode or when it makes sense
-          // Claude-desktop has no project config, and user configs are managed elsewhere
           if (context.workspaceType === "project") {
             const hostConfigPath = hostConfig.projectConfigPath;
             if (hostConfigPath) {

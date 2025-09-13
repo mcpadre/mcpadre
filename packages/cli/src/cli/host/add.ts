@@ -2,6 +2,9 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { getConfigPath } from "../../config/types/workspace.js";
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
 import { withConfigContextAndErrorHandling } from "../_utils/with-config-context-and-error-handling.js";
 
@@ -76,13 +79,17 @@ Examples:
             process.exit(1);
           }
 
-          // Validate that host is capable of the current mode
-          const projectOnlyHosts = ["zed", "vscode"];
-          const userOnlyHosts = ["claude-desktop"];
+          // Import host capability functions
+          const {
+            isUserCapableHost,
+            isProjectCapableHost,
+            SUPPORTED_HOSTS_V1,
+          } = await import("../../config/types/v1/hosts.js");
 
+          // Validate that host is capable of the current mode
           if (
             context.workspaceType === "user" &&
-            projectOnlyHosts.includes(hostName)
+            !isUserCapableHost(hostName)
           ) {
             CLI_LOGGER.error(
               `Host '${hostName}' cannot be added to user configuration`
@@ -90,18 +97,30 @@ Examples:
             CLI_LOGGER.error(
               `Host '${hostName}' only supports project-level configuration`
             );
+
+            const userCapableHosts =
+              SUPPORTED_HOSTS_V1.filter(isUserCapableHost);
+            CLI_LOGGER.error(
+              `User-capable hosts: ${userCapableHosts.join(", ")}`
+            );
             process.exit(1);
           }
 
           if (
             context.workspaceType === "project" &&
-            userOnlyHosts.includes(hostName)
+            !isProjectCapableHost(hostName)
           ) {
             CLI_LOGGER.error(
               `Host '${hostName}' cannot be added to project configuration`
             );
             CLI_LOGGER.error(
               `Host '${hostName}' only supports user-level configuration`
+            );
+
+            const projectCapableHosts =
+              SUPPORTED_HOSTS_V1.filter(isProjectCapableHost);
+            CLI_LOGGER.error(
+              `Project-capable hosts: ${projectCapableHosts.join(", ")}`
             );
             process.exit(1);
           }
@@ -115,17 +134,18 @@ Examples:
           }
 
           // Add host to config
-          const _updatedConfig = addHostToConfig(config, hostName);
-          void _updatedConfig; // Placeholder for Phase 4 config writing
+          const updatedConfig = addHostToConfig(config, hostName);
 
-          // TODO: Config writing will be implemented in Phase 4
-          // For now, we'll skip the actual file writing
-          CLI_LOGGER.warn(
-            "Config writing not yet implemented in Phase 3 - this is a placeholder"
-          );
+          // Write updated config back to file
+          const configPath = getConfigPath(context);
+          if (context.workspaceType === "user") {
+            await writeSettingsUserToFile(configPath, updatedConfig);
+          } else {
+            await writeSettingsProjectToFile(configPath, updatedConfig);
+          }
 
-          CLI_LOGGER.info(
-            `Would add host '${hostName}' to ${context.workspaceType} configuration`
+          CLI_LOGGER.error(
+            `Added host '${hostName}' to ${context.workspaceType} configuration`
           );
           const installCmd =
             context.workspaceType === "user"

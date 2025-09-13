@@ -2,7 +2,6 @@
 
 import { split } from "shlex";
 
-import { createServerLogger } from "../../../logger/server-logger.js";
 import { applyTemplate } from "../../../utils/string-templating/index.js";
 import { createSessionWithInterceptors } from "../../session/startup.js";
 import {
@@ -81,18 +80,6 @@ export async function startShellServer(
     logger,
   });
 
-  // Create dedicated server logger for debugging MCP server communication
-  const serverLogger = await createServerLogger(
-    serverName,
-    directoryResolver.workspace,
-    "trace", // Use trace level to capture all our detailed debugging logs
-    context
-  );
-  logger.debug(
-    { serverName, logLevel: "trace" },
-    "Created dedicated server logger for MCP communication debugging"
-  );
-
   // Parse and validate shell command
   const { command, args, cwd } = await parseShellCommand(
     shellServer,
@@ -141,7 +128,7 @@ export async function startShellServer(
     envStringMap,
     cwd as ResolvedPath,
     sandboxConfig,
-    serverLogger, // Use dedicated server logger for debugging
+    logger, // Use main CLI logger for debugging
     serverName
   );
   const target = createTarget(shellClient);
@@ -152,7 +139,7 @@ export async function startShellServer(
   const sessionConfig = createServerSessionConfig({
     target,
     client: shellClient,
-    logger: serverLogger,
+    logger,
   });
 
   // Create and start session with interceptors

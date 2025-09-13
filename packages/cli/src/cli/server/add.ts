@@ -11,6 +11,9 @@ import {
   RemoteServerSpecError,
 } from "../../config/loaders/remote/index.js";
 import { loadAndValidateServerSpec } from "../../config/loaders/serverspec-loader.js";
+import { getConfigPath } from "../../config/types/workspace.js";
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
 import { CLI_LOGGER } from "../_deps.js";
 import {
@@ -151,7 +154,7 @@ Examples:
     .action(
       withConfigContextAndErrorHandling(
         async (
-          _context: WorkspaceContext,
+          context: WorkspaceContext,
           config: WorkspaceContext["mergedConfig"],
           filePathOrUrl: string | undefined,
           options: {
@@ -191,7 +194,7 @@ Examples:
               }
 
               // Add the server to the configuration
-              const _updatedConfig = {
+              const updatedConfig = {
                 ...config,
                 mcpServers: {
                   ...config.mcpServers,
@@ -199,10 +202,14 @@ Examples:
                   [flowResult.serverName]: flowResult.serverConfig as any,
                 },
               };
-              void _updatedConfig; // Placeholder for Phase 4 config writing
 
-              // Write back to file using the context
-              // TODO: Config writing will be implemented in Phase 4\n          CLI_LOGGER.warn("Config writing not yet implemented - placeholder");
+              // Write updated config back to file
+              const configPath = getConfigPath(context);
+              if (context.workspaceType === "user") {
+                await writeSettingsUserToFile(configPath, updatedConfig);
+              } else {
+                await writeSettingsProjectToFile(configPath, updatedConfig);
+              }
 
               CLI_LOGGER.info("Successfully added server from registry:");
               CLI_LOGGER.info(formatServerList([flowResult.serverName]));
@@ -357,15 +364,19 @@ Examples:
             );
 
             // Add servers to config
-            const _updatedConfig = addServersToConfig(
+            const updatedConfig = addServersToConfig(
               config,
               serverSpec,
               selectedServerNames
             );
-            void _updatedConfig; // Placeholder for Phase 4 config writing
 
-            // Write back to file using the context
-            // TODO: Config writing will be implemented in Phase 4\n          CLI_LOGGER.warn("Config writing not yet implemented - placeholder");
+            // Write updated config back to file
+            const configPath = getConfigPath(context);
+            if (context.workspaceType === "user") {
+              await writeSettingsUserToFile(configPath, updatedConfig);
+            } else {
+              await writeSettingsProjectToFile(configPath, updatedConfig);
+            }
 
             CLI_LOGGER.info(
               `Added ${selectedServerNames.length} server${selectedServerNames.length > 1 ? "s" : ""} to configuration:`

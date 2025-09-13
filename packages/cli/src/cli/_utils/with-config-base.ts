@@ -1,9 +1,11 @@
 // pattern: Imperative Shell
 
-import { join } from "node:path";
-
-import { loadAndValidateSettingsProject } from "../../config/loaders/settings-project.js";
-import { loadAndValidateSettingsUser } from "../../config/loaders/settings-user-loader.js";
+import { loadProjectConfigOrFail } from "../../config/loaders/settings-project.js";
+import {
+  loadRequiredUserConfig,
+  loadUserConfigOrDefault,
+} from "../../config/loaders/settings-user-loader.js";
+import { mergeUserProjectConfig } from "../../config/mergers/user-project-merger.js";
 import { CLI_LOGGER } from "../_deps.js";
 import { getUserDir, getWorkspaceDir } from "../_globals.js";
 import { isUserMode } from "../_globals.js";
@@ -11,8 +13,6 @@ import { isUserMode } from "../_globals.js";
 import type {
   ProjectWorkspaceContext,
   SettingsBase,
-  SettingsProject,
-  SettingsUser,
   UserWorkspaceContext,
   WorkspaceContext,
 } from "../../config/types/index.js";
@@ -31,53 +31,6 @@ export interface ConfigContext<T extends SettingsBase> {
 }
 
 /**
- * Attempts to load user configuration, returning undefined if it fails
- */
-async function tryLoadUserConfig(): Promise<SettingsUser | undefined> {
-  try {
-    const userDir = getUserDir();
-    const userConfigPath = join(userDir, "mcpadre.yaml");
-    return await loadAndValidateSettingsUser(userConfigPath);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Merges project and user configs, with project config taking precedence
- */
-export function mergeConfigs(
-  projectConfig: SettingsProject,
-  userConfig?: SettingsUser
-): SettingsProject {
-  if (!userConfig) {
-    return projectConfig;
-  }
-
-  // Deep merge configuration with project taking precedence
-  return {
-    version: projectConfig.version,
-    // Handle optional env field
-    ...(projectConfig.env !== undefined ? { env: projectConfig.env } : {}),
-    // Merge mcpServers with project servers overriding user servers
-    mcpServers: {
-      ...userConfig.mcpServers,
-      ...projectConfig.mcpServers,
-    },
-    // Merge hosts with project hosts overriding user hosts
-    hosts: {
-      ...userConfig.hosts,
-      ...projectConfig.hosts,
-    },
-    // Merge options with project options overriding user options
-    options: {
-      ...userConfig.options,
-      ...projectConfig.options,
-    },
-  };
-}
-
-/**
  * Creates a WorkspaceContext based on the current mode (user or project)
  */
 export async function createWorkspaceContext(options?: {
@@ -85,30 +38,32 @@ export async function createWorkspaceContext(options?: {
 }): Promise<WorkspaceContext> {
   if (isUserMode()) {
     const userDir = getUserDir();
-    const userConfig = await loadAndValidateSettingsUser(
-      join(userDir, "mcpadre.yaml")
-    );
+    const { config: userConfig, configPath: userConfigPath } =
+      await loadRequiredUserConfig(userDir);
 
     const context: UserWorkspaceContext = {
       workspaceType: "user",
       workspaceDir: userDir,
       userConfig,
+      userConfigPath,
       mergedConfig: userConfig, // User mode has no merging
     };
 
     return context;
   } else {
     const projectDir = options?.target ?? getWorkspaceDir() ?? process.cwd();
-    const projectConfig = await loadAndValidateSettingsProject(
-      join(projectDir, "mcpadre.yaml")
-    );
-    const userConfig = await tryLoadUserConfig(); // Optional
-    const mergedConfig = mergeConfigs(projectConfig, userConfig);
+    const { config: projectConfig, configPath: projectConfigPath } =
+      await loadProjectConfigOrFail(projectDir);
+
+    const { config: userConfig } = await loadUserConfigOrDefault(getUserDir());
+
+    const mergedConfig = mergeUserProjectConfig(userConfig, projectConfig);
 
     const context: ProjectWorkspaceContext = {
       workspaceType: "project",
       workspaceDir: projectDir,
       projectConfig,
+      projectConfigPath,
       userConfig,
       mergedConfig,
     };

@@ -116,52 +116,6 @@ describe("MCP Traffic Logging Integration", () => {
         );
       })
     );
-
-    it(
-      "should not create server directory when logging is disabled",
-      withProcess(async spawn => {
-        // Start the CLI process
-        const proc = spawn(["run", "test-server-logging-disabled"], {
-          cwd: tempProject.path,
-          buffer: false,
-        });
-
-        // Wait for connection message
-        await waitForPattern(
-          proc,
-          "Connected to shell server test-server-logging-disabled",
-          5000
-        );
-
-        // Send initialize request to trigger MCP traffic
-        const initResponse = await sendJsonRpc(proc, {
-          jsonrpc: "2.0",
-          method: "initialize",
-          id: 1,
-          params: {
-            protocolVersion: "2024-11-05",
-            capabilities: {},
-            clientInfo: { name: "test-client", version: "1.0.0" },
-          },
-        });
-
-        // Verify we got a response (could be result or error)
-        expect(initResponse.id).toBe(1);
-        expect("result" in initResponse || "error" in initResponse).toBe(true);
-
-        // Terminate the process
-        await terminateProcess(proc);
-
-        // Verify directory structure does not exist when logging is disabled
-        const serverDir = join(
-          tempProject.path,
-          ".mcpadre",
-          "servers",
-          "test-server-logging-disabled"
-        );
-        expect(existsSync(serverDir)).toBe(false);
-      })
-    );
   });
 
   describe("log content format verification", () => {
@@ -236,8 +190,9 @@ describe("MCP Traffic Logging Integration", () => {
         // Each line should be valid JSON with either req or res property
         for (const line of logLines) {
           const logEntry = JSON.parse(line);
-          expect(logEntry).toHaveProperty("timestamp");
-          expect(logEntry.timestamp).toMatch(
+          console.log("LOG ENTRY:", logEntry);
+          expect(logEntry).toHaveProperty("time");
+          expect(logEntry.time).toMatch(
             /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
           );
 

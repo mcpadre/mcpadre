@@ -5,7 +5,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, it } from "vitest";
 
-import { withProcess } from "../helpers/spawn-cli-v2.js";
+import { findLogMessageInJSONL, withProcess } from "../helpers/spawn-cli-v2.js";
 
 describe("Configuration Error Handling", () => {
   describe("malformed YAML configuration", () => {
@@ -35,10 +35,12 @@ command: ["broken"]  # Wrong indentation
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
           const stderr = String(result.stderr ?? "");
-          const hasValidationError = stderr.includes(
+          const hasValidationError = findLogMessageInJSONL(
+            stderr,
             "Settings validation failed"
           );
-          const hasFilesystemError = stderr.includes(
+          const hasFilesystemError = findLogMessageInJSONL(
+            stderr,
             "Required file or directory not found"
           );
           expect(hasValidationError || hasFilesystemError).toBe(true);
@@ -71,10 +73,12 @@ mcpServers:
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
           const stderr = String(result.stderr ?? "");
-          const hasValidationError = stderr.includes(
+          const hasValidationError = findLogMessageInJSONL(
+            stderr,
             "Settings validation failed"
           );
-          const hasFilesystemError = stderr.includes(
+          const hasFilesystemError = findLogMessageInJSONL(
+            stderr,
             "Required file or directory not found"
           );
           expect(hasValidationError || hasFilesystemError).toBe(true);
@@ -112,10 +116,12 @@ mcpServers:
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
           const stderr = String(result.stderr ?? "");
-          const hasValidationError = stderr.includes(
+          const hasValidationError = findLogMessageInJSONL(
+            stderr,
             "Settings validation failed"
           );
-          const hasFilesystemError = stderr.includes(
+          const hasFilesystemError = findLogMessageInJSONL(
+            stderr,
             "Required file or directory not found"
           );
           expect(hasValidationError || hasFilesystemError).toBe(true);
@@ -139,9 +145,12 @@ mcpServers:
           });
 
           expect(result.exitCode).toBe(1);
-          expect(String(result.stderr ?? "")).toContain(
-            "Required file or directory not found"
-          );
+          expect(
+            findLogMessageInJSONL(
+              String(result.stderr ?? ""),
+              "No mcpadre configuration file found"
+            )
+          ).toBe(true);
         } finally {
           await rm(tempDir, { recursive: true, force: true });
         }
@@ -165,10 +174,12 @@ mcpServers:
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
           const stderr = String(result.stderr ?? "");
-          const hasValidationError = stderr.includes(
+          const hasValidationError = findLogMessageInJSONL(
+            stderr,
             "Settings validation failed"
           );
-          const hasFilesystemError = stderr.includes(
+          const hasFilesystemError = findLogMessageInJSONL(
+            stderr,
             "Required file or directory not found"
           );
           expect(hasValidationError || hasFilesystemError).toBe(true);
@@ -203,10 +214,12 @@ mcpServers:
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
           const stderr = String(result.stderr ?? "");
-          const hasValidationError = stderr.includes(
+          const hasValidationError = findLogMessageInJSONL(
+            stderr,
             "Settings validation failed"
           );
-          const hasFilesystemError = stderr.includes(
+          const hasFilesystemError = findLogMessageInJSONL(
+            stderr,
             "Required file or directory not found"
           );
           expect(hasValidationError || hasFilesystemError).toBe(true);
@@ -240,10 +253,12 @@ mcpServers:
           expect(result.exitCode).toBe(1);
           // Different types of config errors may be categorized as filesystem or validation
           const stderr = String(result.stderr ?? "");
-          const hasValidationError = stderr.includes(
+          const hasValidationError = findLogMessageInJSONL(
+            stderr,
             "Settings validation failed"
           );
-          const hasFilesystemError = stderr.includes(
+          const hasFilesystemError = findLogMessageInJSONL(
+            stderr,
             "Required file or directory not found"
           );
           expect(hasValidationError || hasFilesystemError).toBe(true);
