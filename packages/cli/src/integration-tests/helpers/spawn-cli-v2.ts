@@ -37,10 +37,10 @@ export function findLogMessageInJSONL(
         return true;
       }
     } catch (error) {
-      // Non-JSON lines in JSONL output indicate a bug - log it for debugging
-      console.warn(`Non-JSON line found in JSONL output: ${line}`);
-      console.warn(`Parse error: ${error}`);
-      // Continue processing other lines rather than failing completely
+      // Non-JSON lines in JSONL output indicate a bug - this should fail the test
+      console.error(`Non-JSON line found in JSONL output: ${line}`);
+      console.error(`Parse error: ${error}`);
+      throw new Error(`Invalid JSONL output: non-JSON line found: ${line}`);
     }
   }
   return false;
