@@ -121,27 +121,57 @@ export function extractMcpadreServerName(
 
   switch (hostFormat) {
     case "simple":
-    case "stdio":
-      // args: ["run", "serverName"]
-      return Array.isArray(serverEntry["args"]) &&
-        serverEntry["args"].length >= 2
-        ? String(serverEntry["args"][1])
-        : null;
+    case "stdio": {
+      // Handle both project mode: ["run", "serverName"]
+      // and user mode: ["run", "--user", "serverName"]
+      const args = serverEntry["args"];
+      if (!Array.isArray(args) || args.length < 2) {
+        return null;
+      }
 
-    case "zed": {
-      // command.args: ["run", "serverName"]
-      const command = serverEntry["command"] as Record<string, unknown>;
-      return Array.isArray(command["args"]) && command["args"].length >= 2
-        ? String(command["args"][1])
-        : null;
+      if (args[1] === "--user") {
+        // User mode: must have serverName at position 2
+        return args.length >= 3 ? String(args[2]) : null;
+      } else {
+        // Project mode: serverName at position 1
+        return String(args[1]);
+      }
     }
 
-    case "opencode":
-      // command: ["mcpadre", "run", "serverName"]
-      return Array.isArray(serverEntry["command"]) &&
-        serverEntry["command"].length >= 3
-        ? String(serverEntry["command"][2])
-        : null;
+    case "zed": {
+      // Handle both project mode: ["run", "serverName"]
+      // and user mode: ["run", "--user", "serverName"]
+      const command = serverEntry["command"] as Record<string, unknown>;
+      const args = command["args"];
+      if (!Array.isArray(args) || args.length < 2) {
+        return null;
+      }
+
+      if (args[1] === "--user") {
+        // User mode: must have serverName at position 2
+        return args.length >= 3 ? String(args[2]) : null;
+      } else {
+        // Project mode: serverName at position 1
+        return String(args[1]);
+      }
+    }
+
+    case "opencode": {
+      // Handle both project mode: ["mcpadre", "run", "serverName"]
+      // and user mode: ["mcpadre", "run", "--user", "serverName"]
+      const command = serverEntry["command"];
+      if (!Array.isArray(command) || command.length < 3) {
+        return null;
+      }
+
+      if (command[2] === "--user") {
+        // User mode: must have serverName at position 3
+        return command.length >= 4 ? String(command[3]) : null;
+      } else {
+        // Project mode: serverName at position 2
+        return String(command[2]);
+      }
+    }
 
     default:
       return null;

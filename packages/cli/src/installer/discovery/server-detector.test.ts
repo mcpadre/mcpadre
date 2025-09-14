@@ -164,6 +164,71 @@ describe("server-detector", () => {
 
       expect(extractMcpadreServerName(incompleteServer, "simple")).toBe(null);
     });
+
+    it("extracts server name from simple format with --user flag", () => {
+      const userModeServer = {
+        command: "mcpadre",
+        args: ["run", "--user", "my-server"],
+      };
+
+      expect(extractMcpadreServerName(userModeServer, "simple")).toBe(
+        "my-server"
+      );
+    });
+
+    it("extracts server name from stdio format with --user flag", () => {
+      const userModeServer = {
+        type: "stdio",
+        command: "mcpadre",
+        args: ["run", "--user", "my-server"],
+      };
+
+      expect(extractMcpadreServerName(userModeServer, "stdio")).toBe(
+        "my-server"
+      );
+    });
+
+    it("extracts server name from zed format with --user flag", () => {
+      const userModeServer = {
+        command: {
+          path: "mcpadre",
+          args: ["run", "--user", "my-server"],
+        },
+      };
+
+      expect(extractMcpadreServerName(userModeServer, "zed")).toBe("my-server");
+    });
+
+    it("extracts server name from opencode format", () => {
+      const server = {
+        type: "local",
+        command: ["mcpadre", "run", "my-server"],
+        enabled: true,
+      };
+
+      expect(extractMcpadreServerName(server, "opencode")).toBe("my-server");
+    });
+
+    it("extracts server name from opencode format with --user flag", () => {
+      const userModeServer = {
+        type: "local",
+        command: ["mcpadre", "run", "--user", "my-server"],
+        enabled: true,
+      };
+
+      expect(extractMcpadreServerName(userModeServer, "opencode")).toBe(
+        "my-server"
+      );
+    });
+
+    it("returns null for malformed --user entries", () => {
+      const malformedServer = {
+        command: "mcpadre",
+        args: ["run", "--user"], // Missing server name after --user
+      };
+
+      expect(extractMcpadreServerName(malformedServer, "simple")).toBe(null);
+    });
   });
 
   describe("classifyServers", () => {
