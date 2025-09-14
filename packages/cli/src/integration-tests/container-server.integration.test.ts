@@ -15,8 +15,31 @@ import {
   resolveSandboxConfig,
 } from "../utils/sandbox/index.js";
 
+import type {
+  ProjectWorkspaceContext,
+  WorkspaceContext,
+} from "../config/types/index.js";
 import type { ResolvedPath } from "../runner/types/index.js";
 import type { Logger } from "pino";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
+    mergedConfig: config,
+    projectConfig: config,
+    userConfig: config,
+  } as ProjectWorkspaceContext;
+}
 
 // Helper function to check if Docker is available
 async function isDockerAvailable(): Promise<boolean> {
@@ -95,6 +118,7 @@ describe("Container Server Integration", () => {
 
         try {
           // First install - should pull image and create lock
+          const context = createTestWorkspaceContext(projectDir);
           const firstInstallResult = await containerManager.installContainer({
             serverName,
             container: {
@@ -102,7 +126,7 @@ describe("Container Server Integration", () => {
               tag: "latest",
               pullWhenDigestChanges: false,
             },
-            projectDir,
+            context,
             logger: mockLogger,
           });
 
@@ -146,7 +170,7 @@ describe("Container Server Integration", () => {
               tag: "latest",
               pullWhenDigestChanges: false,
             },
-            projectDir,
+            context,
             logger: mockLogger,
           });
 
@@ -171,6 +195,7 @@ describe("Container Server Integration", () => {
         const serverName = "aws-core-digest-test";
 
         // Install with pullWhenDigestChanges=true
+        const context = createTestWorkspaceContext(projectDir);
         const installResult = await containerManager.installContainer({
           serverName,
           container: {
@@ -178,7 +203,7 @@ describe("Container Server Integration", () => {
             tag: "latest",
             pullWhenDigestChanges: true,
           },
-          projectDir,
+          context,
           logger: mockLogger,
         });
 
@@ -215,7 +240,9 @@ describe("Container Server Integration", () => {
           cwd: projectDir as ResolvedPath,
           sandboxConfig: resolveSandboxConfig({
             config: createSandboxConfig({}),
-            directoryResolver: createDirectoryResolver(projectDir),
+            directoryResolver: createDirectoryResolver(
+              createTestWorkspaceContext(projectDir)
+            ),
             parentEnv: process.env,
           }),
           logger: mockLogger,
@@ -280,7 +307,9 @@ describe("Container Server Integration", () => {
           cwd: projectDir as ResolvedPath,
           sandboxConfig: resolveSandboxConfig({
             config: createSandboxConfig({}),
-            directoryResolver: createDirectoryResolver(projectDir),
+            directoryResolver: createDirectoryResolver(
+              createTestWorkspaceContext(projectDir)
+            ),
             parentEnv: process.env,
           }),
           logger: mockLogger,

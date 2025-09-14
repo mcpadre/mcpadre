@@ -8,7 +8,10 @@ import {
 import { createDirectoryResolver } from "../../directory-resolver/index.js";
 import { resolveEnvVars } from "../../env-resolver/index.js";
 
-import type { EnvValue } from "../../../config/types/index.js";
+import type {
+  EnvValue,
+  WorkspaceContext,
+} from "../../../config/types/index.js";
 import type { SandboxConfig } from "../../../utils/sandbox/index.js";
 import type { FinalizedSandboxConfig } from "../../../utils/sandbox/index.js";
 import type { DirectoryResolver } from "../../directory-resolver/index.js";
@@ -36,13 +39,14 @@ export interface ServerEnvironment {
  * Set up common server environment including directory resolver and environment variables
  */
 export async function setupServerEnvironment(options: {
+  context: WorkspaceContext;
   envConfig?: Record<string, EnvValue>;
   logger: Logger;
 }): Promise<ServerEnvironment> {
-  const { envConfig = {}, logger } = options;
+  const { context, envConfig = {}, logger } = options;
 
   // Create directory resolver for variable resolution
-  const directoryResolver = createDirectoryResolver();
+  const directoryResolver = createDirectoryResolver(context);
 
   // Resolve environment variables
   const resolvedEnv = await resolveEnvVars({
@@ -74,7 +78,7 @@ export function resolveServerSandboxConfig(options: {
   workspaceOptions?: WorkspaceServerOptions;
   readPaths?: string[]; // Additional paths to allow read access
   readWritePaths?: string[]; // Additional paths to allow read+write access
-  isUserMode?: boolean; // Whether running in user mode
+  context: WorkspaceContext; // Workspace context
   logger: Logger;
 }): FinalizedSandboxConfig {
   const {
@@ -83,15 +87,14 @@ export function resolveServerSandboxConfig(options: {
     workspaceOptions,
     readPaths = [],
     readWritePaths = [],
-    isUserMode,
+    context,
     logger,
   } = options;
 
-  // Create base sandbox config
-  const baseSandbox = createSandboxConfig(
-    baseSandboxConfig,
-    isUserMode !== undefined ? { isUserMode } : undefined
-  );
+  // Create base sandbox config - extract workspace type from context
+  const baseSandbox = createSandboxConfig(baseSandboxConfig, {
+    workspaceType: context.workspaceType,
+  });
 
   // Add read paths to allowRead if provided
   const sandboxConfigWithRead =
@@ -146,7 +149,6 @@ export function resolveServerSandboxConfig(options: {
     config: sandboxConfigWithReadWrite,
     directoryResolver,
     parentEnv: process.env,
-    ...(isUserMode !== undefined && { isUserMode }),
     ...(finalWorkspaceOptions && { workspaceOptions: finalWorkspaceOptions }),
   });
 

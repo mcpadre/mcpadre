@@ -13,7 +13,30 @@ import {
   getServerDirectoryPath,
 } from "./index.js";
 
+import type {
+  ProjectWorkspaceContext,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 import type { ResolvedPath } from "../types/index.js";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    mergedConfig: config,
+    projectConfig: config,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
+    userConfig: config,
+  } as ProjectWorkspaceContext;
+}
 
 describe("Server Directory Utilities", () => {
   let tempDir: string;
@@ -37,8 +60,8 @@ describe("Server Directory Utilities", () => {
     it("should create the complete server directory structure", async () => {
       const serverName = "test-server";
       const logsDir = await createServerDirectory(
-        serverName,
-        tempDir as ResolvedPath
+        createTestWorkspaceContext(tempDir),
+        serverName
       );
 
       // Verify the directory structure exists
@@ -60,8 +83,8 @@ describe("Server Directory Utilities", () => {
     it("should handle server names with special characters", async () => {
       const serverName = "my-server_with.special-chars";
       const logsDir = await createServerDirectory(
-        serverName,
-        tempDir as ResolvedPath
+        createTestWorkspaceContext(tempDir),
+        serverName
       );
 
       expect(
@@ -77,14 +100,14 @@ describe("Server Directory Utilities", () => {
 
       // Create directory first time
       const logsDir1 = await createServerDirectory(
-        serverName,
-        tempDir as ResolvedPath
+        createTestWorkspaceContext(tempDir),
+        serverName
       );
 
       // Create directory second time (should not error)
       const logsDir2 = await createServerDirectory(
-        serverName,
-        tempDir as ResolvedPath
+        createTestWorkspaceContext(tempDir),
+        serverName
       );
 
       expect(logsDir1).toBe(logsDir2);
@@ -94,8 +117,8 @@ describe("Server Directory Utilities", () => {
     it("should create directories recursively", async () => {
       const serverName = "nested/server/name";
       const logsDir = await createServerDirectory(
-        serverName,
-        tempDir as ResolvedPath
+        createTestWorkspaceContext(tempDir),
+        serverName
       );
 
       // All parent directories should be created
@@ -195,8 +218,8 @@ describe("Server Directory Utilities", () => {
     it("should return correct server directory path without creating it", () => {
       const serverName = "test-server";
       const serverDir = getServerDirectoryPath(
-        serverName,
-        tempDir as ResolvedPath
+        createTestWorkspaceContext(tempDir),
+        serverName
       );
 
       expect(serverDir).toBe(join(tempDir, ".mcpadre", "servers", serverName));
@@ -208,7 +231,10 @@ describe("Server Directory Utilities", () => {
   describe("getLogsDirectoryPath", () => {
     it("should return correct logs directory path without creating it", () => {
       const serverName = "test-server";
-      const logsDir = getLogsDirectoryPath(serverName, tempDir as ResolvedPath);
+      const logsDir = getLogsDirectoryPath(
+        createTestWorkspaceContext(tempDir),
+        serverName
+      );
 
       expect(logsDir).toBe(
         join(tempDir, ".mcpadre", "servers", serverName, "logs")

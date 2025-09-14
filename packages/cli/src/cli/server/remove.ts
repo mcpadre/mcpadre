@@ -2,6 +2,12 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import {
+  type ProjectWorkspaceContext,
+  type UserWorkspaceContext,
+} from "../../config/types/workspace.js";
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
 import {
   CommonArguments,
@@ -17,11 +23,7 @@ import {
   serverExistsInConfig,
 } from "./server-logic.js";
 
-import type {
-  SettingsProject,
-  SettingsUser,
-} from "../../config/types/index.js";
-import type { ConfigContext } from "../_utils/contexts/index.js";
+import type { WorkspaceContext } from "../../config/types/index.js";
 
 /**
  * Creates the `server remove` command for removing servers from mcpadre configuration
@@ -59,8 +61,8 @@ export function makeServerRemoveCommand() {
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           serverName: string,
           options: {
             yes?: boolean;
@@ -110,12 +112,18 @@ export function makeServerRemoveCommand() {
           // Remove server from config
           const updatedConfig = removeServerFromConfig(config, serverName);
 
-          // Write back to file using the context
-          await context.writeConfig(updatedConfig);
+          // Write updated config back to file
+          const configPath =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfigPath
+              : (context as ProjectWorkspaceContext).projectConfigPath;
 
-          CLI_LOGGER.info(
-            `Removed server '${serverName}' from ${context.type} configuration`
-          );
+          if (context.workspaceType === "user") {
+            await writeSettingsUserToFile(configPath, updatedConfig);
+          } else {
+            await writeSettingsProjectToFile(configPath, updatedConfig);
+          }
+
           // eslint-disable-next-line no-console
           console.log(`Successfully removed server: ${serverName}`);
         }

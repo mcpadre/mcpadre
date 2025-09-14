@@ -15,8 +15,15 @@ import type { ConfigUpdateWithAnalysis } from "../updaters/generic-updater.js";
 /**
  * Path to the global Claude Code configuration file
  * Located at $HOME/.claude.json
+ * Can be overridden with MCPADRE_CLAUDE_CODE_USER_FILE_PATH environment variable (for testing)
  */
 export function getClaudeCodeGlobalConfigPath(): string {
+  // Check for environment variable override (used in integration tests)
+  const envPath = process.env["MCPADRE_CLAUDE_CODE_USER_FILE_PATH"];
+  if (envPath) {
+    return envPath;
+  }
+
   return path.join(os.homedir(), ".claude.json");
 }
 

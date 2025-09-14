@@ -12,7 +12,7 @@ import {
   createUserModeContext,
   ModeContext,
 } from "../helpers/mode-test-utils.js";
-import { withProcess } from "../helpers/spawn-cli-v2.js";
+import { findLogMessageInJSONL, withProcess } from "../helpers/spawn-cli-v2.js";
 
 describe("Host Commands Integration (Consolidated)", () => {
   describe.each([
@@ -250,14 +250,20 @@ hosts:
           );
 
           expect(result.exitCode).toBe(0);
-          expect(result.stderr).toContain(
-            `Removed host 'cursor' from ${mode} configuration`
-          );
+          expect(
+            findLogMessageInJSONL(
+              String(result.stderr ?? ""),
+              `Removed host 'cursor' from ${mode} configuration`
+            )
+          ).toBe(true);
 
           expect(result.exitCode).toBe(0);
-          expect(result.stderr).toContain(
-            `Removed host 'cursor' from ${mode} configuration`
-          );
+          expect(
+            findLogMessageInJSONL(
+              String(result.stderr ?? ""),
+              `Removed host 'cursor' from ${mode} configuration`
+            )
+          ).toBe(true);
 
           // Verify host was removed from config
           const configContent = await fs.promises.readFile(
@@ -500,9 +506,15 @@ hosts:
             );
 
             expect(result.exitCode).not.toBe(0);
-            expect(result.stderr).toContain(
-              "User configuration directory does not exist"
-            );
+            const stderr = String(result.stderr ?? "");
+
+            // When user directory doesn't exist, it shows "No mcpadre user configuration file found"
+            expect(
+              findLogMessageInJSONL(
+                stderr,
+                "No mcpadre user configuration file found"
+              )
+            ).toBe(true);
           })
         );
       });

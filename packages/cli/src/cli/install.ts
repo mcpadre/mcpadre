@@ -2,19 +2,13 @@
 
 import { Command, Option } from "@commander-js/extra-typings";
 
-import { loadUserConfig } from "../config/loaders/settings-user-loader.js";
-import { mergeUserProjectConfig } from "../config/mergers/user-project-merger.js";
-import {
-  installForAllEnabledHosts,
-  installForAllEnabledUserHosts,
-} from "../installer/installer.js";
+import { installForAllEnabledHosts } from "../installer/installer.js";
 
 import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
 
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
+import type { WorkspaceContext } from "../config/types/index.js";
 import type { BulkInstallResult } from "../installer/installer.js";
-import type { ConfigContext } from "./_utils/contexts/index.js";
 
 /**
  * Creates the install command for setting up host configurations
@@ -77,8 +71,8 @@ Note: Zed settings are never added to .gitignore as they contain user preference
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          _config: WorkspaceContext["mergedConfig"],
           options: { skipGitignore?: boolean; force?: boolean },
           command: Command
         ) => {
@@ -86,60 +80,20 @@ Note: Zed settings are never added to .gitignore as they contain user preference
           const { skipGitignore, force = false } = options;
 
           CLI_LOGGER.info(
-            `Installing configuration for enabled hosts in ${context.type} mode...`
+            `Installing configuration for enabled hosts in ${context.workspaceType} mode...`
           );
 
-          if (context.type === "user") {
-            // User-level installation
-            const result = await installForAllEnabledUserHosts({
-              config: config as SettingsUser,
-              userDir: context.getTargetDir(),
-              force,
-              logger: CLI_LOGGER,
-            });
+          // Use unified installation function for both user and project modes
+          // Config merging is already handled by WorkspaceContext creation
+          const result = await installForAllEnabledHosts({
+            context,
+            skipGitignore: skipGitignore ?? false,
+            force,
+            logger: CLI_LOGGER,
+          });
 
-            // Handle the installation result
-            handleInstallResult(result, parentOptions);
-          } else {
-            // Project-level installation
-            // Load user config and merge host settings to respect user overrides
-            let mergedConfig = config as SettingsProject;
-            try {
-              const userConfigResult = await loadUserConfig();
-
-              if (userConfigResult.configPath) {
-                // Real user config found - merge with project config
-                const merged = mergeUserProjectConfig(
-                  userConfigResult.config,
-                  config as SettingsProject
-                );
-                mergedConfig = merged;
-                CLI_LOGGER.debug(
-                  "Using merged user-project configuration for host priorities"
-                );
-              } else {
-                CLI_LOGGER.debug(
-                  "No user config found, using project-only configuration"
-                );
-              }
-            } catch {
-              // User config is optional for project installs, continue with project-only
-              CLI_LOGGER.debug(
-                "Failed to load user config, continuing with project-only configuration"
-              );
-            }
-
-            const result = await installForAllEnabledHosts({
-              config: mergedConfig,
-              projectDir: context.getTargetDir(),
-              skipGitignore: skipGitignore ?? false,
-              force,
-              logger: CLI_LOGGER,
-            });
-
-            // Handle the installation result
-            handleInstallResult(result, parentOptions);
-          }
+          // Handle the installation result
+          handleInstallResult(result, parentOptions);
         }
       )
     );

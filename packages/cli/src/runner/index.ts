@@ -19,7 +19,7 @@ import { startNodeServer } from "./servers/node/startup.js";
 import { startPythonServer } from "./servers/python/startup.js";
 import { startShellServer } from "./servers/shell/startup.js";
 
-import type { SettingsProject } from "../config/types/index.js";
+import type { WorkspaceContext } from "../config/types/index.js";
 import type { McpServerV1 } from "../config/types/v1/server/index.js";
 import type { Logger } from "pino";
 
@@ -29,10 +29,8 @@ import type { Logger } from "pino";
 export interface RunServerOptions {
   serverName: string;
   serverConfig: McpServerV1;
-  projectConfig: SettingsProject;
+  context: WorkspaceContext;
   logger: Logger;
-  isUserMode?: boolean;
-  userDir?: string;
 }
 
 /**

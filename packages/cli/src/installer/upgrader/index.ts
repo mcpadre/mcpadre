@@ -8,6 +8,7 @@ import {
   isNodeServer,
   isPythonServer,
 } from "../../config/types/v1/server/index.js";
+import { getServerDirectoryPath } from "../../runner/server-directory/index.js";
 import {
   ConfigurationError,
   ServerError,
@@ -20,7 +21,12 @@ import { upgradeDockerServer } from "./docker-upgrader.js";
 import { upgradeNodeServer } from "./node-upgrader.js";
 import { upgradePythonServer } from "./python-upgrader.js";
 
-import type { SettingsBase } from "../../config/types/index.js";
+import type {
+  SettingsBase,
+  SettingsProject,
+  SettingsUser,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 import type {
   DockerUpgradeOptions,
   NodeUpgradeOptions,
@@ -47,6 +53,25 @@ export async function upgradeServers(
     `Options: upgradeAll=${options.upgradeAll}, serverNames=[${options.serverNames.join(",")}], skipAudit=${options.skipAudit}`
   );
 
+  // Create WorkspaceContext for compatibility with container manager
+  const context: WorkspaceContext =
+    mode === "user"
+      ? {
+          workspaceType: "user",
+          workspaceDir: workingDir,
+          userConfigPath: `${workingDir}/mcpadre.yaml`,
+          mergedConfig: config as SettingsProject,
+          userConfig: config as SettingsUser,
+        }
+      : {
+          workspaceType: "project",
+          workspaceDir: workingDir,
+          projectConfigPath: `${workingDir}/mcpadre.yaml`,
+          mergedConfig: config as SettingsProject,
+          projectConfig: config as SettingsProject,
+          userConfig: config as SettingsUser,
+        };
+
   const warnings: UpgradeWarning[] = [];
 
   try {
@@ -55,10 +80,16 @@ export async function upgradeServers(
 
     // First, check which servers are outdated
     logger.debug("Checking for outdated servers");
-    const outdatedResult = await checkAllOutdated(workingDir, docker, logger, {
-      includeAudit: false,
-      skipCache: false,
-    });
+    const outdatedResult = await checkAllOutdated(
+      workingDir,
+      docker,
+      logger,
+      {
+        includeAudit: false,
+        skipCache: false,
+      },
+      mode
+    );
 
     // Filter outdated servers based on options
     let serversToUpgrade = outdatedResult.servers.filter(
@@ -119,7 +150,7 @@ export async function upgradeServers(
 
     // Upgrade each server individually
     for (const server of serversToUpgrade) {
-      const serverDir = `${workingDir}/.mcpadre/servers/${server.serverName}`;
+      const serverDir = getServerDirectoryPath(context, server.serverName);
 
       try {
         // Get the server config to extract package/image information
@@ -207,7 +238,7 @@ export async function upgradeServers(
               }),
             };
 
-            result = await upgradeDockerServer(dockerOptions, logger);
+            result = await upgradeDockerServer(dockerOptions, context, logger);
             break;
           }
 

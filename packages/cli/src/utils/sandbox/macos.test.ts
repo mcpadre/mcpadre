@@ -7,7 +7,27 @@ import { createDirectoryResolver } from "../../runner/directory-resolver";
 import { MacOSSandbox } from "./macos";
 import { resolveSandboxConfig } from "./resolver";
 
+import type { WorkspaceContext } from "../../config/types/index.js";
 import type { SandboxConfig } from "./types";
+
+// Helper function to create a WorkspaceContext for testing
+function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
+  const config = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  return {
+    workspaceType: "project",
+    workspaceDir,
+    mergedConfig: config,
+    projectConfig: config,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
+    userConfig: config,
+  };
+}
 
 // Mock execSync for validate method
 vi.mock("node:child_process", () => ({
@@ -29,12 +49,14 @@ describe("MacOSSandbox", () => {
       const config: SandboxConfig = {
         enabled: false,
         networking: false,
-        omitProjectPath: false,
+        omitWorkspacePath: false,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -51,12 +73,14 @@ describe("MacOSSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -81,12 +105,14 @@ describe("MacOSSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -118,12 +144,14 @@ describe("MacOSSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -144,12 +172,14 @@ describe("MacOSSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -173,12 +203,14 @@ describe("MacOSSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,
@@ -205,12 +237,14 @@ describe("MacOSSandbox", () => {
       const config: SandboxConfig = {
         enabled: true,
         networking: false,
-        omitProjectPath: true,
+        omitWorkspacePath: true,
         allowRead: [],
         allowReadWrite: [],
       };
 
-      const directoryResolver = createDirectoryResolver();
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
       const finalizedConfig = resolveSandboxConfig({
         config,
         directoryResolver,

@@ -2,6 +2,8 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { HOST_CONFIGS } from "../../installer/config/host-configs.js";
 import { CLI_LOGGER } from "../_deps.js";
 import {
@@ -18,10 +20,10 @@ import {
 } from "./host-logic.js";
 
 import type {
-  SettingsProject,
-  SettingsUser,
+  ProjectWorkspaceContext,
+  UserWorkspaceContext,
+  WorkspaceContext,
 } from "../../config/types/index.js";
-import type { ConfigContext } from "../_utils/contexts/index.js";
 
 /**
  * Creates the `host remove` command for removing hosts from mcpadre configuration
@@ -58,8 +60,8 @@ export function makeHostRemoveCommand() {
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           hostName: string
         ) => {
           // Validate host name
@@ -70,54 +72,93 @@ export function makeHostRemoveCommand() {
             if (similar.length > 0) {
               CLI_LOGGER.info(`Did you mean: ${similar.join(", ")}?`);
             } else {
-              CLI_LOGGER.info(
-                `Supported hosts: ${context.getSupportedHosts().join(", ")}`
+              // Import here to avoid circular dependency
+              const { isUserCapableHost, SUPPORTED_HOSTS_V1 } = await import(
+                "../../config/types/v1/hosts.js"
               );
+
+              // Filter hosts based on current mode
+              const availableHosts =
+                context.workspaceType === "user"
+                  ? SUPPORTED_HOSTS_V1.filter(isUserCapableHost)
+                  : SUPPORTED_HOSTS_V1;
+
+              CLI_LOGGER.info(`Supported hosts: ${availableHosts.join(", ")}`);
             }
 
             process.exit(1);
           }
 
-          // Validate that host is capable of the current mode for user configs
-          if (!context.isHostCapable(hostName)) {
+          // Import host capability functions for mode validation
+          const { isUserCapableHost, isProjectCapableHost } = await import(
+            "../../config/types/v1/hosts.js"
+          );
+
+          // Validate that host is capable of the current mode
+          if (
+            context.workspaceType === "user" &&
+            !isUserCapableHost(hostName)
+          ) {
             CLI_LOGGER.error(
-              `Host '${hostName}' cannot be removed from ${context.type} configuration`
+              `Host '${hostName}' cannot be removed from user configuration`
             );
             CLI_LOGGER.error(
-              `Host '${hostName}' only supports ${
-                context.type === "user" ? "project" : "user"
-              }-level configuration`
-            );
-            CLI_LOGGER.error(
-              `${context.type}-capable hosts: ${context.getSupportedHosts().join(", ")}`
+              `Host '${hostName}' only supports project-level configuration`
             );
             process.exit(1);
           }
 
-          // Check if host is not present
+          if (
+            context.workspaceType === "project" &&
+            !isProjectCapableHost(hostName)
+          ) {
+            CLI_LOGGER.error(
+              `Host '${hostName}' cannot be removed from project configuration`
+            );
+            CLI_LOGGER.error(
+              `Host '${hostName}' only supports user-level configuration`
+            );
+            process.exit(1);
+          }
+
+          // Get the target config to modify (not merged config)
+          const targetConfig =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfig
+              : (context as ProjectWorkspaceContext).projectConfig;
+
+          // Check if host is not present (use merged config for checking)
           if (!isHostEnabled(config, hostName)) {
             CLI_LOGGER.info(
-              `Host '${hostName}' is not enabled in ${context.type} configuration (or already removed)`
+              `Host '${hostName}' is not enabled in ${context.workspaceType} configuration (or already removed)`
             );
             return; // Exit code 0
           }
 
-          // Remove host from config
-          const updatedConfig = removeHostFromConfig(config, hostName);
+          // Remove host from the target config (not merged)
+          const updatedConfig = removeHostFromConfig(targetConfig, hostName);
 
-          // Write back to file using the context
-          await context.writeConfig(updatedConfig);
+          // Write the updated configuration back to the file
+          const configPath =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfigPath
+              : (context as ProjectWorkspaceContext).projectConfigPath;
+
+          if (context.workspaceType === "user") {
+            await writeSettingsUserToFile(configPath, updatedConfig);
+          } else {
+            await writeSettingsProjectToFile(configPath, updatedConfig);
+          }
 
           CLI_LOGGER.info(
-            `Removed host '${hostName}' from ${context.type} configuration`
+            `Removed host '${hostName}' from ${context.workspaceType} configuration`
           );
 
           // Get the config file path for this host
           const hostConfig = HOST_CONFIGS[hostName];
 
           // Only reference config path for project mode or when it makes sense
-          // Claude-desktop has no project config, and user configs are managed elsewhere
-          if (context.type === "project") {
+          if (context.workspaceType === "project") {
             const hostConfigPath = hostConfig.projectConfigPath;
             if (hostConfigPath) {
               CLI_LOGGER.info(

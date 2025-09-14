@@ -150,3 +150,28 @@ export async function loadAndValidateSettingsProject(
   // This should never be reached due to the throw in validateSettingsProjectObject
   throw new Error("Unexpected validation state");
 }
+
+/**
+ * Finds, loads, and validates the project configuration, throwing an error if not found.
+ * Searches upward from the specified directory.
+ *
+ * @param startDir The directory to start searching from.
+ * @returns A promise that resolves to the loaded config and its path.
+ * @throws {Error} If no project configuration file is found.
+ */
+export async function loadProjectConfigOrFail(startDir: string): Promise<{
+  config: SettingsProject;
+  configPath: string;
+}> {
+  const configPath = await findProjectConfig(startDir);
+
+  if (!configPath) {
+    throw new Error(
+      `No mcpadre project configuration file found in or above ${startDir}.`
+    );
+  }
+
+  const config = await loadAndValidateSettingsProject(configPath);
+
+  return { config, configPath };
+}

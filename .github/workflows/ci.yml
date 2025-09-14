@@ -245,18 +245,17 @@ jobs:
             #### Test Installation
 
             \`\`\`bash
-            # Download the npm-package artifact (zip file containing the tarball)
-            curl -L -o npm-package.zip "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/npm-package"
+            # Download the artifact using GitHub CLI
+            gh run download ${{ github.run_id }} -R ${{ github.repository }} -n npm-package
 
-            # Extract the tarball from the zip
-            unzip npm-package.zip
-
-            # Install the specific tarball globally
-            npm install -g ${{ steps.package.outputs.name }}
+            # Install the tarball
+            npm install -g mcpadre-*.tgz
 
             # Verify installation
             mcpadre --version
             \`\`\`
+
+            **View in GitHub Actions**: [Run #${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
             Ready for release! 🚀
             `;

@@ -11,6 +11,12 @@ import {
   RemoteServerSpecError,
 } from "../../config/loaders/remote/index.js";
 import { loadAndValidateServerSpec } from "../../config/loaders/serverspec-loader.js";
+import {
+  type ProjectWorkspaceContext,
+  type UserWorkspaceContext,
+} from "../../config/types/workspace.js";
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
 import { CLI_LOGGER } from "../_deps.js";
 import {
@@ -27,12 +33,7 @@ import {
 } from "./interactive-flow.js";
 import { addServersToConfig, getServerNamesFromSpec } from "./server-logic.js";
 
-import type {
-  ServerSpec,
-  SettingsProject,
-  SettingsUser,
-} from "../../config/types/index.js";
-import type { ConfigContext } from "../_utils/contexts/index.js";
+import type { ServerSpec, WorkspaceContext } from "../../config/types/index.js";
 
 /**
  * Highlights YAML content with custom colors for terminal display
@@ -156,8 +157,8 @@ Examples:
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           filePathOrUrl: string | undefined,
           options: {
             all?: boolean;
@@ -205,8 +206,17 @@ Examples:
                 },
               };
 
-              // Write back to file using the context
-              await context.writeConfig(updatedConfig);
+              // Write updated config back to file
+              const configPath =
+                context.workspaceType === "user"
+                  ? (context as UserWorkspaceContext).userConfigPath
+                  : (context as ProjectWorkspaceContext).projectConfigPath;
+
+              if (context.workspaceType === "user") {
+                await writeSettingsUserToFile(configPath, updatedConfig);
+              } else {
+                await writeSettingsProjectToFile(configPath, updatedConfig);
+              }
 
               CLI_LOGGER.info("Successfully added server from registry:");
               CLI_LOGGER.info(formatServerList([flowResult.serverName]));
@@ -218,7 +228,7 @@ Examples:
 
               // eslint-disable-next-line no-console
               console.log(
-                `Run '${context.getInstallCommand()}' to install the new server dependencies.`
+                `Run 'mcpadre install' to install the new server dependencies.`
               );
               return;
             } catch (error) {
@@ -367,8 +377,17 @@ Examples:
               selectedServerNames
             );
 
-            // Write back to file using the context
-            await context.writeConfig(updatedConfig);
+            // Write updated config back to file
+            const configPath =
+              context.workspaceType === "user"
+                ? (context as UserWorkspaceContext).userConfigPath
+                : (context as ProjectWorkspaceContext).projectConfigPath;
+
+            if (context.workspaceType === "user") {
+              await writeSettingsUserToFile(configPath, updatedConfig);
+            } else {
+              await writeSettingsProjectToFile(configPath, updatedConfig);
+            }
 
             CLI_LOGGER.info(
               `Added ${selectedServerNames.length} server${selectedServerNames.length > 1 ? "s" : ""} to configuration:`

@@ -4,7 +4,6 @@ import { access, constants, readFile } from "fs/promises";
 import { extname, join } from "path";
 import { parse as parseYaml } from "yaml";
 
-import { getUserDir } from "../../cli/_globals.js";
 import { ajv } from "../../utils/ajv.js";
 import { ConfigurationError, ValidationError } from "../../utils/errors.js";
 import { SettingsUser } from "../types/index.js";
@@ -60,10 +59,10 @@ export function validateSettingsUserObject(
 }
 
 /**
- * Find user configuration file in the user directory
- * Looks for mcpadre.yaml, mcpadre.yml, mcpadre.json, and mcpadre.toml in $MCPADRE_USER_DIR
+ * Find user configuration file in the specified directory
+ * Looks for mcpadre.yaml, mcpadre.yml, mcpadre.json, and mcpadre.toml in the given directory
  */
-export async function findUserConfig(): Promise<string | null> {
+export async function findUserConfig(userDir: string): Promise<string | null> {
   const configFilenames = [
     "mcpadre.yaml",
     "mcpadre.yml",
@@ -71,15 +70,11 @@ export async function findUserConfig(): Promise<string | null> {
     "mcpadre.toml",
   ];
 
-  const userDir = getUserDir();
-
-  // Check if user directory exists
+  // Check if user directory exists. If not, no config can be found.
   try {
     await access(userDir, constants.F_OK);
   } catch {
-    throw new ConfigurationError(
-      `User configuration directory does not exist: ${userDir}`
-    );
+    return null; // Directory does not exist, so no config file can be found
   }
 
   const foundConfigs: string[] = [];
@@ -126,17 +121,15 @@ export async function loadAndValidateSettingsUser(
 }
 
 /**
- * Load user configuration from the user directory
+ * Load user configuration from the specified directory
  * Returns the configuration and the path where it was found
  * If no config file exists, synthesizes a default empty configuration
  */
-export async function loadUserConfig(): Promise<{
+export async function loadUserConfigOrDefault(userDir: string): Promise<{
   config: SettingsUser;
-  userDir: string;
   configPath: string | null;
 }> {
-  const configPath = await findUserConfig();
-  const userDir = getUserDir();
+  const configPath = await findUserConfig(userDir);
 
   if (!configPath) {
     // Synthesize a default empty user configuration
@@ -147,29 +140,27 @@ export async function loadUserConfig(): Promise<{
 
     return {
       config: defaultConfig,
-      userDir,
       configPath: null,
     };
   }
 
   const config = await loadAndValidateSettingsUser(configPath);
 
-  return { config, userDir, configPath };
+  return { config, configPath };
 }
 
 /**
- * Load user configuration from the user directory, requiring that it exists
+ * Load user configuration from the specified directory, requiring that it exists
  * This should be used for commands that explicitly operate on user configs (--user flag)
  */
-export async function loadRequiredUserConfig(): Promise<{
+export async function loadRequiredUserConfig(userDir: string): Promise<{
   config: SettingsUser;
-  userDir: string;
   configPath: string;
 }> {
   let configPath: string | null;
 
   try {
-    configPath = await findUserConfig();
+    configPath = await findUserConfig(userDir);
   } catch (error) {
     if (
       error instanceof Error &&
@@ -183,14 +174,12 @@ export async function loadRequiredUserConfig(): Promise<{
   }
 
   if (!configPath) {
-    const userDir = getUserDir();
     throw new Error(
       `No mcpadre user configuration file found in ${userDir}. Please create one using: mcpadre init --user`
     );
   }
 
   const config = await loadAndValidateSettingsUser(configPath);
-  const userDir = getUserDir();
 
-  return { config, userDir, configPath };
+  return { config, configPath };
 }

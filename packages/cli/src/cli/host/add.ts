@@ -2,6 +2,8 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
 import { withConfigContextAndErrorHandling } from "../_utils/with-config-context-and-error-handling.js";
 
@@ -13,10 +15,10 @@ import {
 } from "./host-logic.js";
 
 import type {
-  SettingsProject,
-  SettingsUser,
+  ProjectWorkspaceContext,
+  UserWorkspaceContext,
+  WorkspaceContext,
 } from "../../config/types/index.js";
-import type { ConfigContext } from "../_utils/contexts/index.js";
 
 /**
  * Creates the `host add` command for adding hosts to mcpadre configuration
@@ -60,8 +62,8 @@ Examples:
     .action(
       withConfigContextAndErrorHandling(
         async (
-          context: ConfigContext,
-          config: SettingsProject | SettingsUser,
+          context: WorkspaceContext,
+          config: WorkspaceContext["mergedConfig"],
           hostName: string
         ) => {
           // Validate host name
@@ -72,47 +74,107 @@ Examples:
             if (similar.length > 0) {
               CLI_LOGGER.info(`Did you mean: ${similar.join(", ")}?`);
             } else {
-              CLI_LOGGER.info(
-                `Supported hosts: ${context.getSupportedHosts().join(", ")}`
+              // Import here to avoid circular dependency
+              const { isUserCapableHost, SUPPORTED_HOSTS_V1 } = await import(
+                "../../config/types/v1/hosts.js"
               );
+
+              // Filter hosts based on current mode
+              const availableHosts =
+                context.workspaceType === "user"
+                  ? SUPPORTED_HOSTS_V1.filter(isUserCapableHost)
+                  : SUPPORTED_HOSTS_V1;
+
+              CLI_LOGGER.info(`Supported hosts: ${availableHosts.join(", ")}`);
             }
 
             process.exit(1);
           }
 
+          // Import host capability functions
+          const {
+            isUserCapableHost,
+            isProjectCapableHost,
+            SUPPORTED_HOSTS_V1,
+          } = await import("../../config/types/v1/hosts.js");
+
           // Validate that host is capable of the current mode
-          if (!context.isHostCapable(hostName)) {
+          if (
+            context.workspaceType === "user" &&
+            !isUserCapableHost(hostName)
+          ) {
             CLI_LOGGER.error(
-              `Host '${hostName}' cannot be added to ${context.type} configuration`
+              `Host '${hostName}' cannot be added to user configuration`
             );
             CLI_LOGGER.error(
-              `Host '${hostName}' only supports ${context.type === "user" ? "project" : "user"}-level configuration`
+              `Host '${hostName}' only supports project-level configuration`
             );
+
+            const userCapableHosts =
+              SUPPORTED_HOSTS_V1.filter(isUserCapableHost);
             CLI_LOGGER.error(
-              `${context.type}-capable hosts: ${context.getSupportedHosts().join(", ")}`
+              `User-capable hosts: ${userCapableHosts.join(", ")}`
             );
             process.exit(1);
           }
 
-          // Check if already enabled
+          if (
+            context.workspaceType === "project" &&
+            !isProjectCapableHost(hostName)
+          ) {
+            CLI_LOGGER.error(
+              `Host '${hostName}' cannot be added to project configuration`
+            );
+            CLI_LOGGER.error(
+              `Host '${hostName}' only supports user-level configuration`
+            );
+
+            const projectCapableHosts =
+              SUPPORTED_HOSTS_V1.filter(isProjectCapableHost);
+            CLI_LOGGER.error(
+              `Project-capable hosts: ${projectCapableHosts.join(", ")}`
+            );
+            process.exit(1);
+          }
+
+          // Get the target config to modify (not merged config)
+          const targetConfig =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfig
+              : (context as ProjectWorkspaceContext).projectConfig;
+
+          // Check if already enabled (use merged config for checking)
           if (isHostEnabled(config, hostName)) {
             CLI_LOGGER.info(
-              `Host '${hostName}' is already enabled in ${context.type} configuration`
+              `Host '${hostName}' is already enabled in ${context.workspaceType} configuration`
             );
             return; // Exit code 0
           }
 
-          // Add host to config
-          const updatedConfig = addHostToConfig(config, hostName);
+          // Add host to the target config (not merged)
+          const updatedConfig = addHostToConfig(targetConfig, hostName);
 
-          // Write back to file using the context
-          await context.writeConfig(updatedConfig);
+          // Write updated config back to file
+          const configPath =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfigPath
+              : (context as ProjectWorkspaceContext).projectConfigPath;
 
-          CLI_LOGGER.info(
-            `Added host '${hostName}' to ${context.type} configuration`
+          if (context.workspaceType === "user") {
+            await writeSettingsUserToFile(configPath, updatedConfig);
+          } else {
+            await writeSettingsProjectToFile(configPath, updatedConfig);
+          }
+
+          CLI_LOGGER.error(
+            `Added host '${hostName}' to ${context.workspaceType} configuration`
           );
+          const installCmd =
+            context.workspaceType === "user"
+              ? "mcpadre install --user"
+              : "mcpadre install";
           CLI_LOGGER.info(
-            `Run '${context.getInstallCommand()}' to generate MCP configuration files for enabled hosts`
+            `Run '${installCmd}' to generate MCP configuration files for enabled hosts`
           );
         }
       )

@@ -5,6 +5,11 @@ import path from "path";
 
 import { loadAndValidateSettingsProject } from "../../config/loaders/settings-project.js";
 import {
+  findUserConfig,
+  loadSettingsUserFromFile,
+  validateSettingsUserObject,
+} from "../../config/loaders/settings-user-loader.js";
+import {
   type ContainerMcpServerV1,
   isContainerServer,
   isHttpServer,
@@ -15,11 +20,14 @@ import {
   type NodeMcpServerV1,
   type PythonMcpServerV1,
 } from "../../config/types/v1/server/index.js";
+import { getServerDirectoryPath } from "../../runner/server-directory/index.js";
+import { ConfigurationError } from "../../utils/errors.js";
 
 import { checkDockerOutdated } from "./docker-detector.js";
 import { auditNpmPackage, checkNpmOutdated } from "./npm-detector.js";
 import { auditPythonPackage, checkPypiOutdated } from "./pypi-detector.js";
 
+import type { SettingsBase } from "../../config/types/index.js";
 import type {
   OutdatedCheckOptions,
   OutdatedCheckResult,
@@ -32,17 +40,32 @@ import type { Logger } from "pino";
  * Main function to check all installed MCP servers for updates
  */
 export async function checkAllOutdated(
-  projectDir: string,
+  workingDir: string,
   docker: Docker,
   logger: Logger,
-  options: OutdatedCheckOptions = {}
+  options: OutdatedCheckOptions = {},
+  mode: "project" | "user" = "project"
 ): Promise<OutdatedCheckResult> {
   const startTime = Date.now();
 
   try {
-    // Load project configuration
-    const configPath = path.join(projectDir, "mcpadre.yaml");
-    const settings = await loadAndValidateSettingsProject(configPath);
+    // Load appropriate configuration based on mode
+    let settings: SettingsBase;
+    if (mode === "user") {
+      const userConfigPath = await findUserConfig(workingDir);
+      if (!userConfigPath) {
+        throw new Error("No user configuration found");
+      }
+      const data = await loadSettingsUserFromFile(userConfigPath);
+      if (!validateSettingsUserObject(data)) {
+        throw new ConfigurationError("Invalid user configuration file");
+      }
+      settings = data;
+    } else {
+      const configPath = path.join(workingDir, "mcpadre.yaml");
+      settings = await loadAndValidateSettingsProject(configPath);
+    }
+
     if (Object.keys(settings.mcpServers).length === 0) {
       return {
         servers: [],
@@ -81,7 +104,15 @@ export async function checkAllOutdated(
 
     // Check each server in parallel for better performance
     const serverChecks = filteredServers.map(([serverName, server]) =>
-      checkSingleServer(serverName, server, projectDir, docker, logger, options)
+      checkSingleServer(
+        serverName,
+        server,
+        workingDir,
+        docker,
+        logger,
+        options,
+        mode === "user" // Pass isUserMode
+      )
     );
 
     const servers = await Promise.all(serverChecks);
@@ -126,13 +157,41 @@ export async function checkAllOutdated(
 async function checkSingleServer(
   serverName: string,
   server: McpServerV1,
-  projectDir: string,
+  workingDir: string,
   docker: Docker,
   logger: Logger,
-  options: OutdatedCheckOptions
+  options: OutdatedCheckOptions,
+  isUserMode = false
 ): Promise<OutdatedServerInfo> {
   const serverType = getServerType(server);
-  const serverDir = path.join(projectDir, ".mcpadre", "servers", serverName);
+
+  // Create a temporary WorkspaceContext for compatibility
+  const emptyConfig = {
+    mcpServers: {},
+    hosts: {},
+    options: {},
+    version: 1,
+  } as const;
+
+  const tempContext: import("../../config/types/index.js").WorkspaceContext =
+    isUserMode
+      ? {
+          workspaceType: "user",
+          workspaceDir: workingDir,
+          userConfigPath: `${workingDir}/mcpadre.yaml`,
+          mergedConfig: emptyConfig,
+          userConfig: emptyConfig,
+        }
+      : {
+          workspaceType: "project",
+          workspaceDir: workingDir,
+          projectConfigPath: `${workingDir}/mcpadre.yaml`,
+          mergedConfig: emptyConfig,
+          projectConfig: emptyConfig,
+          userConfig: emptyConfig,
+        };
+
+  const serverDir = getServerDirectoryPath(tempContext, serverName);
 
   logger.debug(`Checking ${serverName} (${serverType}) for updates`);
 

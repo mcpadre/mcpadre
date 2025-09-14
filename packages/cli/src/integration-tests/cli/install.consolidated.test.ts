@@ -15,7 +15,7 @@ import {
   createUserModeContext,
   ModeContext,
 } from "../helpers/mode-test-utils.js";
-import { withProcess } from "../helpers/spawn-cli-v2.js";
+import { findLogMessageInJSONL, withProcess } from "../helpers/spawn-cli-v2.js";
 
 import type {
   CommandStringTemplate,
@@ -267,9 +267,15 @@ hosts:
             });
 
             expect(result.exitCode).toBe(0);
-            expect(result.stderr).toContain(
-              "Skipping host 'zed' - does not support user-level configuration"
-            );
+            const stderr = String(result.stderr ?? "");
+
+            // In user mode, project-only hosts should be skipped
+            expect(
+              findLogMessageInJSONL(
+                stderr,
+                "Skipping host 'zed' - does not support user-level configuration"
+              )
+            ).toBe(true);
           })
         );
       } else {
@@ -350,6 +356,7 @@ hosts:
             // Verify Node.js server directory was created in user servers
             const nodeServerDir = path.join(
               modeContext.getConfigDir(),
+              ".mcpadre",
               "servers",
               "memory-server"
             );
@@ -392,10 +399,9 @@ hosts:
             expect(result.exitCode).toBe(0);
 
             // Verify Claude Code config was created/updated
-            const claudeConfigPath = path.join(
-              modeContext.env["HOME"]!,
-              ".claude.json"
-            );
+            const claudeConfigPath =
+              modeContext.env["MCPADRE_CLAUDE_CODE_USER_FILE_PATH"] ??
+              path.join(modeContext.env["HOME"]!, ".claude.json");
             const claudeConfigExists = await fs.promises
               .access(claudeConfigPath)
               .then(() => true)
@@ -816,6 +822,10 @@ hosts:
           );
 
           // Run user install
+          const userClaudeConfigPath = path.join(
+            tempIsolationDir,
+            ".claude.json"
+          );
           const result = await spawn(["install", "--user"], {
             cwd: tempIsolationDir,
             buffer: true,
@@ -823,16 +833,13 @@ hosts:
               ...process.env,
               MCPADRE_USER_DIR: userDir,
               HOME: tempIsolationDir,
+              MCPADRE_CLAUDE_CODE_USER_FILE_PATH: userClaudeConfigPath,
             },
           });
 
           expect(result.exitCode).toBe(0);
 
           // Verify user-level installation happened
-          const userClaudeConfigPath = path.join(
-            tempIsolationDir,
-            ".claude.json"
-          );
           const userClaudeConfigExists = await fs.promises
             .access(userClaudeConfigPath)
             .then(() => true)

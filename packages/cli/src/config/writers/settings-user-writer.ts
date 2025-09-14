@@ -2,10 +2,9 @@
 
 import { stringify as stringifyToml } from "@iarna/toml";
 import { mkdir, writeFile } from "fs/promises";
-import { dirname, extname, join } from "path";
+import { dirname, extname } from "path";
 import { stringify } from "yaml";
 
-import { getUserDir } from "../../cli/_globals.js";
 import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
 
 import type { SettingsUser } from "../types/index.js";
@@ -54,22 +53,4 @@ export async function writeSettingsUserToFile(
   }
 
   await writeFile(filePath, content, "utf8");
-}
-
-/**
- * Writes a SettingsUser configuration to the user directory with the default filename
- *
- * @param config SettingsUser configuration to write
- * @param filename Optional filename (defaults to mcpadre.yaml)
- */
-export async function writeSettingsUserToUserDir(
-  config: SettingsUser,
-  filename = "mcpadre.yaml"
-): Promise<string> {
-  const userDir = getUserDir();
-  const configPath = join(userDir, filename);
-
-  await writeSettingsUserToFile(configPath, config);
-
-  return configPath;
 }

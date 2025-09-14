@@ -17,15 +17,15 @@ export default defineConfig({
     silent: "passed-only",
 
     // Longer timeouts for integration tests
-    testTimeout: 300000,
-    hookTimeout: 300000,
+    testTimeout: 120000,
+    hookTimeout: 120000,
     bail: Infinity,
 
     // Limit concurrent workers to reduce CPU contention
     pool: "threads",
     poolOptions: {
       threads: {
-        maxThreads: 4, // Half of available CPUs (8/2 = 4)
+        maxThreads: 4,
         minThreads: 1,
       },
     },

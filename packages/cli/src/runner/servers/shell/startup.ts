@@ -2,7 +2,6 @@
 
 import { split } from "shlex";
 
-import { createServerLogger } from "../../../logger/server-logger.js";
 import { applyTemplate } from "../../../utils/string-templating/index.js";
 import { createSessionWithInterceptors } from "../../session/startup.js";
 import {
@@ -70,32 +69,16 @@ async function parseShellCommand(
 export async function startShellServer(
   options: ShellStartupConfig
 ): Promise<void> {
-  const { serverName, serverConfig, projectConfig, logger } = options;
+  const { serverName, serverConfig, context, logger } = options;
   const shellServer = serverConfig;
+  const projectConfig = context.mergedConfig;
 
   // Set up common server environment
   const { directoryResolver, envStringMap } = await setupServerEnvironment({
+    context,
     envConfig: shellServer.env ?? {},
     logger,
   });
-
-  // Create dedicated server logger for debugging MCP server communication
-  // Use user directory if in user mode, otherwise use workspace directory
-  const loggerBaseDir =
-    options.isUserMode && options.userDir
-      ? (options.userDir as ResolvedPath)
-      : (directoryResolver.workspace as ResolvedPath);
-
-  const serverLogger = await createServerLogger(
-    serverName,
-    loggerBaseDir,
-    "trace", // Use trace level to capture all our detailed debugging logs
-    options.isUserMode
-  );
-  logger.debug(
-    { serverName, logLevel: "trace" },
-    "Created dedicated server logger for MCP communication debugging"
-  );
 
   // Parse and validate shell command
   const { command, args, cwd } = await parseShellCommand(
@@ -135,7 +118,7 @@ export async function startShellServer(
     sandboxConfig: shellServer.sandbox ?? {},
     directoryResolver,
     ...(workspaceOptions && { workspaceOptions }),
-    ...(options.isUserMode !== undefined && { isUserMode: options.isUserMode }),
+    context,
     logger,
   });
 
@@ -145,7 +128,7 @@ export async function startShellServer(
     envStringMap,
     cwd as ResolvedPath,
     sandboxConfig,
-    serverLogger, // Use dedicated server logger for debugging
+    logger, // Use main CLI logger for debugging
     serverName
   );
   const target = createTarget(shellClient);
@@ -156,7 +139,7 @@ export async function startShellServer(
   const sessionConfig = createServerSessionConfig({
     target,
     client: shellClient,
-    logger: serverLogger,
+    logger,
   });
 
   // Create and start session with interceptors
@@ -167,6 +150,7 @@ export async function startShellServer(
     serverName,
     directoryResolver,
     logger,
+    context,
   });
 
   logger.info(`Connected to ${connectionInfo}`);

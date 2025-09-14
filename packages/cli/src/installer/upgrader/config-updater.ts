@@ -41,7 +41,7 @@ export async function updateConfigWithNewVersions(
     // Find the actual config file path based on mode
     let configPath: string | null;
     if (mode === "user") {
-      configPath = await findUserConfig();
+      configPath = await findUserConfig(workingDir);
     } else {
       configPath = await findProjectConfig(workingDir);
     }

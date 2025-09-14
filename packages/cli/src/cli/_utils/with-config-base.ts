@@ -1,8 +1,21 @@
 // pattern: Imperative Shell
 
+import { loadProjectConfigOrFail } from "../../config/loaders/settings-project.js";
+import {
+  loadRequiredUserConfig,
+  loadUserConfigOrDefault,
+} from "../../config/loaders/settings-user-loader.js";
+import { mergeUserProjectConfig } from "../../config/mergers/user-project-merger.js";
 import { CLI_LOGGER } from "../_deps.js";
+import { getUserDir, getWorkspaceDir } from "../_globals.js";
+import { isUserMode } from "../_globals.js";
 
-import type { SettingsBase } from "../../config/types/index.js";
+import type {
+  ProjectWorkspaceContext,
+  SettingsBase,
+  UserWorkspaceContext,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 
 export type ConfigLoader<T extends SettingsBase> = () => Promise<{
   config: T;
@@ -15,6 +28,48 @@ export interface ConfigContext<T extends SettingsBase> {
   configType: "project" | "user";
   noConfigMessage: string[];
   paramName: string; // 'projectDir' or 'userDir'
+}
+
+/**
+ * Creates a WorkspaceContext based on the current mode (user or project)
+ */
+export async function createWorkspaceContext(options?: {
+  target?: string;
+}): Promise<WorkspaceContext> {
+  if (isUserMode()) {
+    const userDir = getUserDir();
+    const { config: userConfig, configPath: userConfigPath } =
+      await loadRequiredUserConfig(userDir);
+
+    const context: UserWorkspaceContext = {
+      workspaceType: "user",
+      workspaceDir: userDir,
+      userConfig,
+      userConfigPath,
+      mergedConfig: userConfig, // User mode has no merging
+    };
+
+    return context;
+  } else {
+    const projectDir = options?.target ?? getWorkspaceDir() ?? process.cwd();
+    const { config: projectConfig, configPath: projectConfigPath } =
+      await loadProjectConfigOrFail(projectDir);
+
+    const { config: userConfig } = await loadUserConfigOrDefault(getUserDir());
+
+    const mergedConfig = mergeUserProjectConfig(userConfig, projectConfig);
+
+    const context: ProjectWorkspaceContext = {
+      workspaceType: "project",
+      workspaceDir: projectDir,
+      projectConfig,
+      projectConfigPath,
+      userConfig,
+      mergedConfig,
+    };
+
+    return context;
+  }
 }
 
 /**

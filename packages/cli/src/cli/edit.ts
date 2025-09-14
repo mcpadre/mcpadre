@@ -13,18 +13,22 @@ import {
   validateSettingsProjectObject,
 } from "../config/loaders/settings-project.js";
 import {
-  findUserConfig,
   loadSettingsUserFromFile,
   validateSettingsUserObject,
 } from "../config/loaders/settings-user-loader.js";
 import { writeSettingsUserToFile } from "../config/writers/settings-user-writer.js";
 
 import { promptForConfirmation } from "./_utils/interactive-prompts.js";
-import { withProjectConfigAndErrorHandling } from "./_utils/with-project-config-and-error-handling.js";
+import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
 import { CLI_LOGGER } from "./_deps.js";
-import { getUserDir, isUserMode } from "./_globals.js";
 
-import type { SettingsProject, SettingsUser } from "../config/types/index.js";
+import type {
+  ProjectWorkspaceContext,
+  SettingsProject,
+  SettingsUser,
+  UserWorkspaceContext,
+  WorkspaceContext,
+} from "../config/types/index.js";
 
 /**
  * Create the 'mcpadre edit' command
@@ -56,69 +60,49 @@ Environment Variables:
   EDITOR                   Your preferred editor (defaults to system default)
       `
     )
-    .action(() => {
-      const userMode = isUserMode();
-
-      if (userMode) {
-        // User-level edit
-        return handleUserEdit();
-      } else {
-        // Project-level edit
-        return withProjectConfigAndErrorHandling(handleProjectEdit)();
-      }
-    });
+    .action(withConfigContextAndErrorHandling(handleEdit));
 }
 
 /**
- * Handle user-level configuration editing
+ * Handle configuration editing for both user and project modes
  */
-async function handleUserEdit(): Promise<void> {
-  CLI_LOGGER.info("Opening user configuration for editing...");
+async function handleEdit(
+  context: WorkspaceContext,
+  _config: SettingsProject | SettingsUser
+): Promise<void> {
+  const configType = context.workspaceType === "user" ? "user" : "project";
+  CLI_LOGGER.info(`Opening ${configType} configuration for editing...`);
 
   try {
-    let userConfigPath = await findUserConfig();
+    const configPath =
+      context.workspaceType === "user"
+        ? (context as UserWorkspaceContext).userConfigPath
+        : (context as ProjectWorkspaceContext).projectConfigPath;
 
     // If no user config exists, create a stub one
-    if (!userConfigPath) {
-      const userDir = getUserDir();
-      userConfigPath = join(userDir, "mcpadre.yaml");
+    if (context.workspaceType === "user") {
+      try {
+        // Try to load the existing config to check if it exists
+        await loadSettingsUserFromFile(configPath);
+      } catch {
+        // Config doesn't exist, create stub
+        CLI_LOGGER.info(
+          `No user configuration found. Creating stub config at ${configPath}`
+        );
 
-      CLI_LOGGER.info(
-        `No user configuration found. Creating stub config at ${userConfigPath}`
-      );
+        const stubConfig: SettingsUser = {
+          version: 1,
+          mcpServers: {},
+          hosts: {},
+        };
 
-      // Create stub user configuration
-      const stubConfig: SettingsUser = {
-        version: 1,
-        mcpServers: {},
-        hosts: {},
-      };
-
-      await writeSettingsUserToFile(userConfigPath, stubConfig);
+        await writeSettingsUserToFile(configPath, stubConfig);
+      }
     }
 
-    await editConfigFile(userConfigPath, "user");
+    await editConfigFile(configPath, configType);
   } catch (error) {
-    CLI_LOGGER.error("Failed to edit user configuration:");
-    CLI_LOGGER.error(error);
-    process.exit(1);
-  }
-}
-
-/**
- * Handle project-level configuration editing
- */
-async function handleProjectEdit(
-  _config: SettingsProject,
-  _projectDir: string,
-  configPath: string
-): Promise<void> {
-  CLI_LOGGER.info("Opening project configuration for editing...");
-
-  try {
-    await editConfigFile(configPath, "project");
-  } catch (error) {
-    CLI_LOGGER.error("Failed to edit project configuration:");
+    CLI_LOGGER.error(`Failed to edit ${configType} configuration:`);
     CLI_LOGGER.error(error);
     process.exit(1);
   }

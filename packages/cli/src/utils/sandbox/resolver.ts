@@ -19,8 +19,6 @@ export interface SandboxResolverOptions {
   directoryResolver: DirectoryResolver;
   /** Parent environment variables (usually process.env) */
   parentEnv: Record<string, string | undefined>;
-  /** Whether running in user mode */
-  isUserMode?: boolean;
   /** Workspace-level options that affect sandbox configuration */
   workspaceOptions?: {
     /** If true, disables sandboxing for all servers */
@@ -63,8 +61,7 @@ const DNS_PATHS = ["/etc/resolv.conf", "/etc/hosts", "/etc/nsswitch.conf"];
 export function resolveSandboxConfig(
   options: SandboxResolverOptions
 ): FinalizedSandboxConfig {
-  const { config, directoryResolver, parentEnv, isUserMode, workspaceOptions } =
-    options;
+  const { config, directoryResolver, parentEnv, workspaceOptions } = options;
 
   // Check if sandboxing is globally disabled
   const isEnabled = workspaceOptions?.disableAllSandboxes
@@ -90,9 +87,10 @@ export function resolveSandboxConfig(
   }
 
   // Add workspace path if not omitted
-  if (!config.omitProjectPath) {
-    // Use user directory for user mode, workspace for project mode
-    const dirTemplate = isUserMode ? "{{dirs.user}}" : "{{dirs.workspace}}";
+  if (!config.omitWorkspacePath) {
+    // Use workspace directory for both user and project modes
+    // (WorkspaceContext now handles the correct workspace path for both modes)
+    const dirTemplate = "{{dirs.workspace}}";
     allowReadTemplates.push(dirTemplate as PathStringTemplate);
   }
 

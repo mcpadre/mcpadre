@@ -546,7 +546,7 @@ mcpServers:
 
             expect(result.exitCode).not.toBe(0);
             expect(result.stderr).toContain(
-              "User configuration directory does not exist"
+              "No mcpadre user configuration file found"
             );
           })
         );

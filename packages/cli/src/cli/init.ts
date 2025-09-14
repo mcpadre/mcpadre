@@ -1,23 +1,49 @@
 // pattern: Imperative Shell
 
 import { Command } from "@commander-js/extra-typings";
+import { existsSync } from "fs";
 import { mkdir } from "fs/promises";
+import { join } from "path";
 
-import { createConfigContext } from "./_utils/contexts/index.js";
+import { writeSettingsProjectToFile } from "../config/writers/settings-project-writer.js";
+import { writeSettingsUserToFile } from "../config/writers/settings-user-writer.js";
+
 import { isInteractiveEnvironment } from "./_utils/interactive-prompts.js";
 import { promptMultiHostToggle } from "./_utils/multi-host-toggle.js";
 import { getSimilarHosts, isValidHost } from "./host/host-logic.js";
 import { CLI_LOGGER } from "./_deps.js";
+import { getUserDir, isUserMode } from "./_globals.js";
 
 import type { SettingsProject, SettingsUser } from "../config/types/index.js";
 import type { SupportedHostV1 } from "../config/types/v1/hosts.js";
+
+/**
+ * Get supported hosts for the current mode
+ */
+function getSupportedHosts(isUserMode: boolean): readonly SupportedHostV1[] {
+  if (isUserMode) {
+    // User mode supports user-capable hosts
+    return ["claude-code", "cursor", "opencode", "claude-desktop"] as const;
+  } else {
+    // Project mode supports project-capable hosts
+    return ["claude-code", "cursor", "opencode", "zed", "vscode"] as const;
+  }
+}
+
+/**
+ * Check if a host is capable in the current mode
+ */
+function isHostCapable(host: string, isUserMode: boolean): boolean {
+  const supportedHosts = getSupportedHosts(isUserMode);
+  return supportedHosts.includes(host as SupportedHostV1);
+}
 
 /**
  * Validates a list of host names, returning validation results
  */
 function validateHosts(
   hostNames: string[],
-  context: ReturnType<typeof createConfigContext>
+  isUserMode: boolean
 ): {
   valid: SupportedHostV1[];
   invalid: { name: string; suggestions: string[] }[];
@@ -33,13 +59,12 @@ function validateHosts(
         name: hostName,
         suggestions: getSimilarHosts(hostName),
       });
-    } else if (!context.isHostCapable(hostName)) {
+    } else if (!isHostCapable(hostName, isUserMode)) {
       invalidForMode.push({
         name: hostName,
-        reason:
-          context.type === "user"
-            ? "Host is not supported in user mode (project-only host)"
-            : `Host is not supported in ${context.type} mode`,
+        reason: isUserMode
+          ? "Host is not supported in user mode (project-only host)"
+          : "Host is not supported in project mode",
       });
     } else {
       valid.push(hostName);
@@ -50,10 +75,52 @@ function validateHosts(
 }
 
 /**
+ * Find existing configuration file (checking multiple formats)
+ */
+function findExistingConfig(targetDir: string): string | null {
+  const CONFIG_FILE_NAMES = [
+    "mcpadre.json",
+    "mcpadre.yaml",
+    "mcpadre.yml",
+    "mcpadre.toml",
+  ];
+
+  for (const fileName of CONFIG_FILE_NAMES) {
+    const filePath = join(targetDir, fileName);
+    if (existsSync(filePath)) {
+      return filePath;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get next steps message for configured hosts
+ */
+function getNextStepsMessage(
+  _selectedHosts: readonly string[],
+  isUserMode: boolean
+): string[] {
+  const steps = [
+    "",
+    "Next steps:",
+    "1. Add your MCP servers to the 'mcpServers' section of the configuration",
+    "2. Install the configuration for your enabled hosts:",
+  ];
+
+  if (isUserMode) {
+    steps.push("   mcpadre install");
+  } else {
+    steps.push("   mcpadre install");
+  }
+
+  return steps;
+}
+
+/**
  * Creates the mcpadre init command
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function makeInitCommand() {
+export function makeInitCommand(): Command {
   return new Command("init")
     .description("Initialize a new mcpadre configuration file")
     .option(
@@ -120,15 +187,17 @@ Supported hosts:
       }) => {
         try {
           const { target, host, force = false } = options;
+          // eslint-disable-next-line no-restricted-syntax -- Init command needs to check mode before config exists
+          const userModeEnabled = isUserMode();
 
-          // Create the appropriate config context based on mode (user or project)
-          const context = createConfigContext({ target });
+          // Determine target directory
+          const targetDir = userModeEnabled ? getUserDir() : target;
 
           // Create target directory if it doesn't exist
-          await mkdir(context.getTargetDir(), { recursive: true });
+          await mkdir(targetDir, { recursive: true });
 
           // Check for existing configuration
-          const existingConfigPath = await context.findExistingConfig();
+          const existingConfigPath = findExistingConfig(targetDir);
           if (existingConfigPath && !force) {
             CLI_LOGGER.error(
               `Configuration file already exists: ${existingConfigPath}`
@@ -139,12 +208,6 @@ Supported hosts:
             process.exit(1);
           }
 
-          // If we're overwriting, use the existing file's format
-          if (existingConfigPath && force) {
-            // Update the config path to use the existing file's path/format
-            await context.initConfigPath();
-          }
-
           // Determine if we're in interactive mode
           const isInteractive = isInteractiveEnvironment();
 
@@ -153,23 +216,22 @@ Supported hosts:
           if (!isInteractive) {
             // Non-interactive mode: require --host flags
             if (host.length === 0) {
-              const supportedHosts = context.getSupportedHosts();
+              const supportedHosts = getSupportedHosts(userModeEnabled);
 
               CLI_LOGGER.error(
                 "Non-interactive mode requires at least one --host flag"
               );
 
-              const exampleCommand =
-                context.type === "user"
-                  ? "mcpadre init --user --host claude-code --host cursor"
-                  : "mcpadre init --host cursor --host zed";
+              const exampleCommand = userModeEnabled
+                ? "mcpadre init --user --host claude-code --host cursor"
+                : "mcpadre init --host cursor --host zed";
 
               CLI_LOGGER.error(`Example: ${exampleCommand}`);
               CLI_LOGGER.error(`Supported hosts: ${supportedHosts.join(", ")}`);
               process.exit(1);
             }
 
-            const validation = validateHosts(host, context);
+            const validation = validateHosts(host, userModeEnabled);
 
             // Handle invalid host names
             if (validation.invalid.length > 0) {
@@ -186,12 +248,14 @@ Supported hosts:
 
             // Handle hosts that are invalid for the current mode
             if (validation.invalidForMode.length > 0) {
-              CLI_LOGGER.error(`Hosts not supported in ${context.type} mode:`);
+              const modeType = userModeEnabled ? "user" : "project";
+              CLI_LOGGER.error(`Hosts not supported in ${modeType} mode:`);
               for (const { name, reason } of validation.invalidForMode) {
                 CLI_LOGGER.error(`  • ${name}: ${reason}`);
               }
+              const supportedHosts = getSupportedHosts(userModeEnabled);
               CLI_LOGGER.error(
-                `${context.type}-capable hosts: ${context.getSupportedHosts().join(", ")}`
+                `${modeType}-capable hosts: ${supportedHosts.join(", ")}`
               );
             }
 
@@ -199,7 +263,7 @@ Supported hosts:
               validation.invalid.length > 0 ||
               validation.invalidForMode.length > 0
             ) {
-              const supportedHosts = context.getSupportedHosts();
+              const supportedHosts = getSupportedHosts(userModeEnabled);
               CLI_LOGGER.error(`Supported hosts: ${supportedHosts.join(", ")}`);
               process.exit(1);
             }
@@ -207,8 +271,9 @@ Supported hosts:
             selectedHosts = validation.valid;
           } else {
             // Interactive mode: use multi-host toggle
+            const modeType = userModeEnabled ? "user" : "project";
             CLI_LOGGER.info(
-              `Starting interactive host selection for ${context.getConfigTypeName()} configuration...`
+              `Starting interactive host selection for ${modeType} configuration...`
             );
 
             // Create a default config with no hosts enabled (for init mode)
@@ -221,22 +286,21 @@ Supported hosts:
 
             try {
               const result = await promptMultiHostToggle(defaultConfig, {
-                message:
-                  context.type === "user"
-                    ? "Select which MCP hosts to enable in your user configuration:"
-                    : "Select which MCP hosts to enable for this project:",
-                helpText:
-                  context.type === "user"
-                    ? "Use spacebar to toggle, arrow keys to navigate, Enter to confirm. Only user-capable hosts are shown."
-                    : "Use spacebar to toggle, arrow keys to navigate, Enter to confirm. Only project-capable hosts are shown.",
+                message: userModeEnabled
+                  ? "Select which MCP hosts to enable in your user configuration:"
+                  : "Select which MCP hosts to enable for this project:",
+                helpText: userModeEnabled
+                  ? "Use spacebar to toggle, arrow keys to navigate, Enter to confirm. Only user-capable hosts are shown."
+                  : "Use spacebar to toggle, arrow keys to navigate, Enter to confirm. Only project-capable hosts are shown.",
                 requireAtLeastOne: true,
-                isUserMode: context.type === "user",
+                isUserMode: userModeEnabled,
                 validate: (selectedHosts: SupportedHostV1[]) => {
                   const invalidHosts = selectedHosts.filter(
-                    host => !context.isHostCapable(host)
+                    host => !isHostCapable(host, userModeEnabled)
                   );
                   if (invalidHosts.length > 0) {
-                    return `These hosts are not supported in ${context.type} mode: ${invalidHosts.join(", ")}`;
+                    const modeType = userModeEnabled ? "user" : "project";
+                    return `These hosts are not supported in ${modeType} mode: ${invalidHosts.join(", ")}`;
                   }
                   return true;
                 },
@@ -250,7 +314,6 @@ Supported hosts:
               selectedHosts = result.selectedHosts;
             } catch (promptError) {
               // Handle user cancellation (Ctrl+C/Escape) gracefully
-              // This matches the pattern used in host/manage.ts for consistent UX
               if (
                 promptError instanceof Error &&
                 (promptError.message.includes("User force closed the prompt") ||
@@ -265,7 +328,7 @@ Supported hosts:
             }
           }
 
-          // Create the appropriate configuration object based on context type
+          // Create the appropriate configuration object
           const config: SettingsProject | SettingsUser = {
             version: 1,
             env: {},
@@ -279,8 +342,16 @@ Supported hosts:
             ),
           };
 
-          // Write configuration using the context
-          await context.writeConfig(config);
+          // Write configuration using the appropriate writer
+          const configPath = join(targetDir, "mcpadre.yaml");
+          if (userModeEnabled) {
+            await writeSettingsUserToFile(configPath, config as SettingsUser);
+          } else {
+            await writeSettingsProjectToFile(
+              configPath,
+              config as SettingsProject
+            );
+          }
 
           // Report success
           if (existingConfigPath) {
@@ -289,13 +360,14 @@ Supported hosts:
             );
           }
 
+          const modeType = userModeEnabled ? "user" : "project";
           CLI_LOGGER.info(
-            `Created mcpadre ${context.getConfigTypeName()} configuration: ${context.getConfigPath()}`
+            `Created mcpadre ${modeType} configuration: ${configPath}`
           );
           CLI_LOGGER.info(`Enabled hosts: ${selectedHosts.join(", ")}`);
 
-          // Get next steps from the context
-          const nextSteps = context.getNextStepsMessage(selectedHosts);
+          // Get next steps
+          const nextSteps = getNextStepsMessage(selectedHosts, userModeEnabled);
           for (const step of nextSteps) {
             CLI_LOGGER.info(step);
           }
