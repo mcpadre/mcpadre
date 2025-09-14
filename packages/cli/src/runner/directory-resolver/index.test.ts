@@ -7,7 +7,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createDirectoryResolver } from "./index.js";
 
-import type { WorkspaceContext } from "../../config/types/index.js";
+import type {
+  ProjectWorkspaceContext,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 
 // Helper function to create a WorkspaceContext for testing
 function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
@@ -21,10 +24,11 @@ function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
   return {
     workspaceType: "project",
     workspaceDir,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
     mergedConfig: config,
     projectConfig: config,
-    userConfig: undefined,
-  };
+    userConfig: config,
+  } as ProjectWorkspaceContext;
 }
 
 describe("createDirectoryResolver", () => {

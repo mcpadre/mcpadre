@@ -15,7 +15,10 @@ import {
   resolveSandboxConfig,
 } from "../utils/sandbox/index.js";
 
-import type { WorkspaceContext } from "../config/types/index.js";
+import type {
+  ProjectWorkspaceContext,
+  WorkspaceContext,
+} from "../config/types/index.js";
 import type { ResolvedPath } from "../runner/types/index.js";
 import type { Logger } from "pino";
 
@@ -31,10 +34,11 @@ function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
   return {
     workspaceType: "project",
     workspaceDir,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
     mergedConfig: config,
     projectConfig: config,
-    userConfig: undefined,
-  };
+    userConfig: config,
+  } as ProjectWorkspaceContext;
 }
 
 // Helper function to check if Docker is available

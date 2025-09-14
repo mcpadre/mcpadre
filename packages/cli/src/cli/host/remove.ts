@@ -2,6 +2,7 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
 import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { HOST_CONFIGS } from "../../installer/config/host-configs.js";
 import { CLI_LOGGER } from "../_deps.js";
@@ -18,7 +19,11 @@ import {
   removeHostFromConfig,
 } from "./host-logic.js";
 
-import type { WorkspaceContext } from "../../config/types/index.js";
+import type {
+  ProjectWorkspaceContext,
+  UserWorkspaceContext,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 
 /**
  * Creates the `host remove` command for removing hosts from mcpadre configuration
@@ -67,15 +72,62 @@ export function makeHostRemoveCommand() {
             if (similar.length > 0) {
               CLI_LOGGER.info(`Did you mean: ${similar.join(", ")}?`);
             } else {
-              CLI_LOGGER.info(
-                "Supported hosts: claude-code, cursor, zed, vscode, claude-desktop, opencode"
+              // Import here to avoid circular dependency
+              const { isUserCapableHost, SUPPORTED_HOSTS_V1 } = await import(
+                "../../config/types/v1/hosts.js"
               );
+
+              // Filter hosts based on current mode
+              const availableHosts =
+                context.workspaceType === "user"
+                  ? SUPPORTED_HOSTS_V1.filter(isUserCapableHost)
+                  : SUPPORTED_HOSTS_V1;
+
+              CLI_LOGGER.info(`Supported hosts: ${availableHosts.join(", ")}`);
             }
 
             process.exit(1);
           }
 
-          // Check if host is not present
+          // Import host capability functions for mode validation
+          const { isUserCapableHost, isProjectCapableHost } = await import(
+            "../../config/types/v1/hosts.js"
+          );
+
+          // Validate that host is capable of the current mode
+          if (
+            context.workspaceType === "user" &&
+            !isUserCapableHost(hostName)
+          ) {
+            CLI_LOGGER.error(
+              `Host '${hostName}' cannot be removed from user configuration`
+            );
+            CLI_LOGGER.error(
+              `Host '${hostName}' only supports project-level configuration`
+            );
+            process.exit(1);
+          }
+
+          if (
+            context.workspaceType === "project" &&
+            !isProjectCapableHost(hostName)
+          ) {
+            CLI_LOGGER.error(
+              `Host '${hostName}' cannot be removed from project configuration`
+            );
+            CLI_LOGGER.error(
+              `Host '${hostName}' only supports user-level configuration`
+            );
+            process.exit(1);
+          }
+
+          // Get the target config to modify (not merged config)
+          const targetConfig =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfig
+              : (context as ProjectWorkspaceContext).projectConfig;
+
+          // Check if host is not present (use merged config for checking)
           if (!isHostEnabled(config, hostName)) {
             CLI_LOGGER.info(
               `Host '${hostName}' is not enabled in ${context.workspaceType} configuration (or already removed)`
@@ -83,19 +135,19 @@ export function makeHostRemoveCommand() {
             return; // Exit code 0
           }
 
-          // Remove host from config
-          const updatedConfig = removeHostFromConfig(config, hostName);
+          // Remove host from the target config (not merged)
+          const updatedConfig = removeHostFromConfig(targetConfig, hostName);
 
           // Write the updated configuration back to the file
+          const configPath =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfigPath
+              : (context as ProjectWorkspaceContext).projectConfigPath;
+
           if (context.workspaceType === "user") {
-            await writeSettingsUserToFile(
-              context.userConfigPath,
-              updatedConfig
-            );
+            await writeSettingsUserToFile(configPath, updatedConfig);
           } else {
-            // TODO: Implement project config writing
-            // await writeSettingsProjectToFile(context.projectConfigPath, updatedConfig);
-            CLI_LOGGER.warn("Project config writing not yet implemented.");
+            await writeSettingsProjectToFile(configPath, updatedConfig);
           }
 
           CLI_LOGGER.info(

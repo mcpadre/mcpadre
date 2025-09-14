@@ -190,9 +190,8 @@ describe("MCP Traffic Logging Integration", () => {
         // Each line should be valid JSON with either req or res property
         for (const line of logLines) {
           const logEntry = JSON.parse(line);
-          console.log("LOG ENTRY:", logEntry);
-          expect(logEntry).toHaveProperty("time");
-          expect(logEntry.time).toMatch(
+          expect(logEntry).toHaveProperty("timestamp");
+          expect(logEntry.timestamp).toMatch(
             /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
           );
 
@@ -201,6 +200,12 @@ describe("MCP Traffic Logging Integration", () => {
           const hasRes = "res" in logEntry;
           expect(hasReq || hasRes).toBe(true);
           expect(hasReq && hasRes).toBe(false); // Should not have both
+
+          // Verify NO infrastructure log messages leaked into MCP traffic logs
+          // Infrastructure logs would have different structure (pino format)
+          expect(logEntry).not.toHaveProperty("level");
+          expect(logEntry).not.toHaveProperty("msg");
+          expect(logEntry).not.toHaveProperty("name");
         }
       })
     );

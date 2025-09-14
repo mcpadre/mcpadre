@@ -23,6 +23,7 @@ describe("Workspace Unification", () => {
   const userContext: UserWorkspaceContext = {
     workspaceType: "user",
     workspaceDir: "/home/user/.mcpadre",
+    userConfigPath: "/home/user/.mcpadre/mcpadre.yaml",
     userConfig: {
       version: 1,
       mcpServers: {},
@@ -40,7 +41,14 @@ describe("Workspace Unification", () => {
   const projectContext: ProjectWorkspaceContext = {
     workspaceType: "project",
     workspaceDir: "/projects/myapp",
+    projectConfigPath: "/projects/myapp/mcpadre.yaml",
     projectConfig: {
+      version: 1,
+      mcpServers: {},
+      hosts: {},
+      options: {},
+    },
+    userConfig: {
       version: 1,
       mcpServers: {},
       hosts: {},
@@ -483,6 +491,7 @@ describe("Workspace Unification", () => {
             const testContext: UserWorkspaceContext = {
               workspaceType: "user",
               workspaceDir,
+              userConfigPath: `${workspaceDir}/mcpadre.yaml`,
               userConfig: {
                 version: 1,
                 mcpServers: {},

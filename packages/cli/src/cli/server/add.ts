@@ -11,7 +11,10 @@ import {
   RemoteServerSpecError,
 } from "../../config/loaders/remote/index.js";
 import { loadAndValidateServerSpec } from "../../config/loaders/serverspec-loader.js";
-import { getConfigPath } from "../../config/types/workspace.js";
+import {
+  type ProjectWorkspaceContext,
+  type UserWorkspaceContext,
+} from "../../config/types/workspace.js";
 import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
 import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { forceQuoteVersionStrings } from "../../utils/yaml-helpers.js";
@@ -204,7 +207,11 @@ Examples:
               };
 
               // Write updated config back to file
-              const configPath = getConfigPath(context);
+              const configPath =
+                context.workspaceType === "user"
+                  ? (context as UserWorkspaceContext).userConfigPath
+                  : (context as ProjectWorkspaceContext).projectConfigPath;
+
               if (context.workspaceType === "user") {
                 await writeSettingsUserToFile(configPath, updatedConfig);
               } else {
@@ -371,7 +378,11 @@ Examples:
             );
 
             // Write updated config back to file
-            const configPath = getConfigPath(context);
+            const configPath =
+              context.workspaceType === "user"
+                ? (context as UserWorkspaceContext).userConfigPath
+                : (context as ProjectWorkspaceContext).projectConfigPath;
+
             if (context.workspaceType === "user") {
               await writeSettingsUserToFile(configPath, updatedConfig);
             } else {

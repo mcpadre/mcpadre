@@ -24,7 +24,8 @@ function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
     workspaceDir,
     mergedConfig: config,
     projectConfig: config,
-    userConfig: undefined,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
+    userConfig: config,
   };
 }
 

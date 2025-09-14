@@ -1,6 +1,14 @@
 // pattern: Imperative Shell
 
+import fs from "node:fs";
+
 import { CLI_LOGGER } from "../cli/_deps.js";
+import {
+  isProjectCapableHost,
+  isUserCapableHost,
+  SUPPORTED_HOSTS_V1,
+  type SupportedHostV1,
+} from "../config/types/v1/hosts.js";
 import { getServerPath } from "../config/types/workspace.js";
 import { HostError } from "../utils/errors.js";
 
@@ -22,13 +30,13 @@ import {
 } from "./gitignore-manager.js";
 
 import type { SettingsBase, WorkspaceContext } from "../config/types/index.js";
-import type { SupportedHostV1 } from "../config/types/v1/hosts.js";
 import type {
   ContainerMcpServerV1,
   NodeMcpServerV1,
   NodeOptionsV1,
   PythonMcpServerV1,
 } from "../config/types/v1/server/index.js";
+import type { ConfigUpdateWithAnalysis } from "./updaters/generic-updater.js";
 import type { Logger } from "pino";
 
 /**
@@ -144,6 +152,12 @@ export async function installForHost(
 
   const config = context.mergedConfig;
   const projectDir = context.workspaceDir;
+
+  // Debug logging for user mode
+  if (logger) {
+    logger.debug(`Installing in ${context.workspaceType} mode`);
+    logger.debug(`Workspace directory: ${context.workspaceDir}`);
+  }
 
   // Install container images for any container servers
   let containerImagesPulled = 0;
@@ -307,17 +321,57 @@ export async function installForHost(
   if (!hostConfig) {
     throw new HostError(`Unsupported host: ${host}`, host);
   }
-  const configPath = hostConfig.projectConfigPath;
 
-  // Read existing host configuration
-  const existingContent = await readConfigFile(projectDir, configPath);
+  // Determine which config path and updater to use based on workspace type
+  const isUserMode = context.workspaceType === "user";
+  const shouldUseUserConfig =
+    isUserMode &&
+    hostConfig.userConfigPath &&
+    hostConfig.userMcpConfigUpdaterWithAnalysis;
+
+  let configPath: string;
+  let existingContent: string;
+  let configUpdateResult: ConfigUpdateWithAnalysis;
+
+  if (
+    shouldUseUserConfig &&
+    hostConfig.userConfigPath &&
+    hostConfig.userMcpConfigUpdaterWithAnalysis
+  ) {
+    // User mode with user-capable host
+    configPath =
+      typeof hostConfig.userConfigPath === "function"
+        ? hostConfig.userConfigPath()
+        : hostConfig.userConfigPath;
+
+    // Read existing user-level configuration
+    try {
+      existingContent = await fs.promises.readFile(configPath, "utf-8");
+    } catch {
+      existingContent = "";
+    }
+
+    // Update user-level configuration
+    // We've already checked that userMcpConfigUpdaterWithAnalysis exists in the condition
+    configUpdateResult = hostConfig.userMcpConfigUpdaterWithAnalysis(
+      existingContent,
+      config.mcpServers
+    );
+  } else {
+    // Project mode or host without user config support
+    configPath = hostConfig.projectConfigPath;
+
+    // Read existing host configuration from project directory
+    existingContent = await readConfigFile(projectDir, configPath);
+
+    // Update project-level configuration
+    configUpdateResult = hostConfig.projectMcpConfigUpdaterWithAnalysis(
+      existingContent,
+      config.mcpServers
+    );
+  }
+
   const wasCreated = existingContent === "";
-
-  // Update configuration with analysis to detect external/orphaned servers
-  const configUpdateResult = hostConfig.projectMcpConfigUpdaterWithAnalysis(
-    existingContent,
-    config.mcpServers
-  );
 
   const serverCount = Object.keys(config.mcpServers).length;
 
@@ -365,11 +419,21 @@ export async function installForHost(
   }
 
   // Write updated configuration
-  await writeConfigFile(
-    projectDir,
-    configPath,
-    configUpdateResult.updatedConfig
-  );
+  if (shouldUseUserConfig) {
+    // Write user-level configuration directly
+    await fs.promises.writeFile(
+      configPath,
+      configUpdateResult.updatedConfig,
+      "utf-8"
+    );
+  } else {
+    // Write project-level configuration
+    await writeConfigFile(
+      projectDir,
+      configPath,
+      configUpdateResult.updatedConfig
+    );
+  }
 
   // Handle gitignore management
   let gitignoreUpdated = false;
@@ -389,7 +453,9 @@ export async function installForHost(
   }
 
   return {
-    configPath: `${projectDir}/${configPath}`,
+    configPath: shouldUseUserConfig
+      ? configPath
+      : `${projectDir}/${configPath}`,
     wasCreated,
     gitignoreUpdated,
     serverCount,
@@ -400,22 +466,46 @@ export async function installForHost(
 }
 
 /**
- * Gets list of enabled hosts from project configuration
+ * Gets list of enabled hosts from project configuration, filtered by workspace type
  *
  * @param config Project configuration
- * @returns Array of enabled hosts
+ * @param context Workspace context to determine user/project mode
+ * @returns Array of enabled hosts appropriate for the workspace type
  */
-function getEnabledHosts(config: SettingsBase): SupportedHostV1[] {
+function getEnabledHosts(
+  config: SettingsBase,
+  context: WorkspaceContext
+): SupportedHostV1[] {
   if (!config.hosts) {
     return [];
   }
 
-  const enabledHosts: SupportedHostV1[] = [];
+  // Filter hosts based on workspace type
+  const availableHosts =
+    context.workspaceType === "user"
+      ? SUPPORTED_HOSTS_V1.filter(isUserCapableHost)
+      : SUPPORTED_HOSTS_V1.filter(isProjectCapableHost);
 
-  // Only include hosts that are explicitly set to true
+  const enabledHosts: SupportedHostV1[] = [];
+  const skippedHosts: SupportedHostV1[] = [];
+
+  // Only include hosts that are explicitly set to true AND are capable for the current mode
   for (const [hostName, enabled] of Object.entries(config.hosts)) {
     if (enabled === true) {
-      enabledHosts.push(hostName as SupportedHostV1);
+      if (availableHosts.includes(hostName as SupportedHostV1)) {
+        enabledHosts.push(hostName as SupportedHostV1);
+      } else {
+        skippedHosts.push(hostName as SupportedHostV1);
+      }
+    }
+  }
+
+  // Log skipped hosts in user mode
+  if (context.workspaceType === "user" && skippedHosts.length > 0) {
+    for (const host of skippedHosts) {
+      CLI_LOGGER.info(
+        `Skipping host '${host}' - does not support user-level configuration`
+      );
     }
   }
 
@@ -442,7 +532,7 @@ export async function installForAllEnabledHosts(
   const projectDir = context.workspaceDir;
 
   // Get enabled hosts from configuration
-  const enabledHosts = getEnabledHosts(config);
+  const enabledHosts = getEnabledHosts(config, context);
 
   // Initialize result aggregation
   const results: Record<string, InstallResult> = {};

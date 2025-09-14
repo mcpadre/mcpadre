@@ -2,7 +2,6 @@
 
 import { Command } from "@commander-js/extra-typings";
 
-import { getConfigPath } from "../../config/types/workspace.js";
 import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
 import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
@@ -15,7 +14,11 @@ import {
   isValidHost,
 } from "./host-logic.js";
 
-import type { WorkspaceContext } from "../../config/types/index.js";
+import type {
+  ProjectWorkspaceContext,
+  UserWorkspaceContext,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 
 /**
  * Creates the `host add` command for adding hosts to mcpadre configuration
@@ -71,9 +74,18 @@ Examples:
             if (similar.length > 0) {
               CLI_LOGGER.info(`Did you mean: ${similar.join(", ")}?`);
             } else {
-              CLI_LOGGER.info(
-                "Supported hosts: claude-code, cursor, zed, vscode, claude-desktop, opencode"
+              // Import here to avoid circular dependency
+              const { isUserCapableHost, SUPPORTED_HOSTS_V1 } = await import(
+                "../../config/types/v1/hosts.js"
               );
+
+              // Filter hosts based on current mode
+              const availableHosts =
+                context.workspaceType === "user"
+                  ? SUPPORTED_HOSTS_V1.filter(isUserCapableHost)
+                  : SUPPORTED_HOSTS_V1;
+
+              CLI_LOGGER.info(`Supported hosts: ${availableHosts.join(", ")}`);
             }
 
             process.exit(1);
@@ -125,7 +137,13 @@ Examples:
             process.exit(1);
           }
 
-          // Check if already enabled
+          // Get the target config to modify (not merged config)
+          const targetConfig =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfig
+              : (context as ProjectWorkspaceContext).projectConfig;
+
+          // Check if already enabled (use merged config for checking)
           if (isHostEnabled(config, hostName)) {
             CLI_LOGGER.info(
               `Host '${hostName}' is already enabled in ${context.workspaceType} configuration`
@@ -133,11 +151,15 @@ Examples:
             return; // Exit code 0
           }
 
-          // Add host to config
-          const updatedConfig = addHostToConfig(config, hostName);
+          // Add host to the target config (not merged)
+          const updatedConfig = addHostToConfig(targetConfig, hostName);
 
           // Write updated config back to file
-          const configPath = getConfigPath(context);
+          const configPath =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfigPath
+              : (context as ProjectWorkspaceContext).projectConfigPath;
+
           if (context.workspaceType === "user") {
             await writeSettingsUserToFile(configPath, updatedConfig);
           } else {

@@ -3,7 +3,15 @@ import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { type SpawnFunction, withProcess } from "../helpers/spawn-cli-v2.js";
+import {
+  isUserCapableHost,
+  SUPPORTED_HOSTS_V1,
+} from "../../config/types/v1/hosts.js";
+import {
+  findLogMessageInJSONL,
+  type SpawnFunction,
+  withProcess,
+} from "../helpers/spawn-cli-v2.js";
 
 describe("Host User Commands Integration", () => {
   let tempDir: string;
@@ -194,13 +202,17 @@ hosts:
         });
 
         expect(result.exitCode).not.toBe(0);
-        expect(result.stderr).toContain("Unsupported host: invalid-host");
+        const stderr = String(result.stderr ?? "");
+
+        // Check for error message in JSONL format
+        expect(
+          findLogMessageInJSONL(stderr, "Unsupported host: invalid-host")
+        ).toBe(true);
 
         // In user mode, it should only list user-capable hosts now
-        const stderr = (result.stderr ?? "") as string;
-        expect(stderr).toContain(
-          "Supported hosts: claude-code, claude-desktop, cursor, opencode"
-        );
+        const userCapableHosts = SUPPORTED_HOSTS_V1.filter(isUserCapableHost);
+        const expectedMessage = `Supported hosts: ${userCapableHosts.join(", ")}`;
+        expect(findLogMessageInJSONL(stderr, expectedMessage)).toBe(true);
       })
     );
 
@@ -232,9 +244,15 @@ hosts:
         });
 
         expect(result.exitCode).not.toBe(0);
-        expect(result.stderr).toContain(
-          "User configuration directory does not exist"
-        );
+        const stderr = String(result.stderr ?? "");
+
+        // When user directory doesn't exist, it shows "No mcpadre user configuration file found"
+        expect(
+          findLogMessageInJSONL(
+            stderr,
+            "No mcpadre user configuration file found"
+          )
+        ).toBe(true);
       })
     );
   });
@@ -274,9 +292,15 @@ hosts:
         });
 
         expect(result.exitCode).not.toBe(0);
-        expect(result.stderr).toContain(
-          "User configuration directory does not exist"
-        );
+        const stderr = String(result.stderr ?? "");
+
+        // When user directory doesn't exist, it shows "No mcpadre user configuration file found"
+        expect(
+          findLogMessageInJSONL(
+            stderr,
+            "No mcpadre user configuration file found"
+          )
+        ).toBe(true);
       })
     );
   });
@@ -336,12 +360,20 @@ hosts:
         });
 
         expect(result.exitCode).not.toBe(0);
-        expect(result.stderr).toContain(
-          "Host 'zed' cannot be removed from user configuration"
-        );
-        expect(result.stderr).toContain(
-          "Host 'zed' only supports project-level configuration"
-        );
+        const stderr = String(result.stderr ?? "");
+
+        expect(
+          findLogMessageInJSONL(
+            stderr,
+            "Host 'zed' cannot be removed from user configuration"
+          )
+        ).toBe(true);
+        expect(
+          findLogMessageInJSONL(
+            stderr,
+            "Host 'zed' only supports project-level configuration"
+          )
+        ).toBe(true);
       })
     );
 

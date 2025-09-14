@@ -14,6 +14,7 @@ import { HttpMcpClient } from "../../runner/servers/http/client.js";
 import type {
   EnvStringTemplate,
   HttpMcpServer,
+  ProjectWorkspaceContext,
   WorkspaceContext,
 } from "../../config/types/index.js";
 import type { JsonRpcRequest } from "../../test-utils/json-rpc/types.js";
@@ -30,10 +31,11 @@ function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
   return {
     workspaceType: "project",
     workspaceDir,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
     mergedConfig: config,
     projectConfig: config,
-    userConfig: undefined,
-  };
+    userConfig: config,
+  } as ProjectWorkspaceContext;
 }
 
 describe("HTTP MCP Client Integration with Context7", () => {

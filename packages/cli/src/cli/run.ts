@@ -2,6 +2,7 @@
 
 import { Command } from "@commander-js/extra-typings";
 
+import { createInfrastructureLogger } from "../logger/infrastructure-logger.js";
 import { runMcpServer } from "../runner/index.js";
 
 import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-and-error-handling.js";
@@ -26,7 +27,6 @@ export function makeRunCommand() {
           serverName: string
         ) => {
           const configType = context.workspaceType;
-          CLI_LOGGER.info(`Starting ${configType} MCP server: ${serverName}`);
 
           // Extract named server from mcpServers config
           const serverConfig = config.mcpServers[serverName];
@@ -38,12 +38,23 @@ export function makeRunCommand() {
             process.exit(1);
           }
 
-          // Run the MCP server with workspace context
+          // Create infrastructure logger AFTER config validation
+          // This will either return the existing stderr logger (if TTY)
+          // or create a file logger in .mcpadre/logs/ (if NOT TTY)
+          const runLogger = await createInfrastructureLogger(
+            context,
+            serverName,
+            CLI_LOGGER
+          );
+
+          runLogger.info(`Starting ${configType} MCP server: ${serverName}`);
+
+          // Run the MCP server with the appropriate logger
           await runMcpServer({
             serverName,
             serverConfig,
             context,
-            logger: CLI_LOGGER,
+            logger: runLogger,
           });
         }
       )

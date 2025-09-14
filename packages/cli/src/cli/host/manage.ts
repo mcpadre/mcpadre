@@ -2,7 +2,10 @@
 
 import { Command } from "@commander-js/extra-typings";
 
-import { getConfigPath } from "../../config/types/index.js";
+import {
+  type ProjectWorkspaceContext,
+  type UserWorkspaceContext,
+} from "../../config/types/index.js";
 import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
 import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
@@ -62,7 +65,11 @@ async function hostManageLogic(
     const updatedConfig = applyHostChanges(config, result.changes);
 
     // Write back to file
-    const configPath = getConfigPath(context);
+    const configPath =
+      context.workspaceType === "user"
+        ? (context as UserWorkspaceContext).userConfigPath
+        : (context as ProjectWorkspaceContext).projectConfigPath;
+
     if (isUserConfig) {
       await writeSettingsUserToFile(configPath, updatedConfig as SettingsUser);
     } else {

@@ -506,9 +506,15 @@ hosts:
             );
 
             expect(result.exitCode).not.toBe(0);
-            expect(result.stderr).toContain(
-              "User configuration directory does not exist"
-            );
+            const stderr = String(result.stderr ?? "");
+
+            // When user directory doesn't exist, it shows "No mcpadre user configuration file found"
+            expect(
+              findLogMessageInJSONL(
+                stderr,
+                "No mcpadre user configuration file found"
+              )
+            ).toBe(true);
           })
         );
       });

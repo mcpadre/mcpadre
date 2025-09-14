@@ -178,15 +178,17 @@ async function checkSingleServer(
       ? {
           workspaceType: "user",
           workspaceDir: workingDir,
+          userConfigPath: `${workingDir}/mcpadre.yaml`,
           mergedConfig: emptyConfig,
           userConfig: emptyConfig,
         }
       : {
           workspaceType: "project",
           workspaceDir: workingDir,
+          projectConfigPath: `${workingDir}/mcpadre.yaml`,
           mergedConfig: emptyConfig,
           projectConfig: emptyConfig,
-          userConfig: undefined,
+          userConfig: emptyConfig,
         };
 
   const serverDir = getServerDirectoryPath(tempContext, serverName);

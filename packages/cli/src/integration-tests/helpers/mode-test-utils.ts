@@ -84,6 +84,11 @@ export function createUserModeContext(
     env: {
       MCPADRE_USER_DIR: userDir,
       HOME: fakeHomeDir,
+      // Override Claude Code's user-level config to use test directory
+      MCPADRE_CLAUDE_CODE_USER_FILE_PATH: path.join(
+        fakeHomeDir,
+        ".claude.json"
+      ),
     },
     getConfigPath: () => userConfigPath,
     getConfigDir: () => userDir,

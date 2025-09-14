@@ -2,14 +2,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { mergeConfigs } from "./with-config-base.js";
+import { mergeUserProjectConfig } from "./user-project-merger.js";
 
-import type {
-  SettingsProject,
-  SettingsUser,
-} from "../../config/types/index.js";
+import type { SettingsProject, SettingsUser } from "../types/index.js";
 
-describe("mergeConfigs", () => {
+describe("mergeUserProjectConfig", () => {
   // Helper function to create minimal valid configs for testing
   const createProjectConfig = (
     overrides: Partial<SettingsProject> = {}
@@ -28,7 +25,7 @@ describe("mergeConfigs", () => {
   });
 
   describe("basic functionality", () => {
-    it("should return project config when user config is undefined", () => {
+    it("should return project config when user config is null", () => {
       const projectConfig = createProjectConfig({
         mcpServers: {
           "project-server": {
@@ -37,24 +34,31 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, undefined);
+      const result = mergeUserProjectConfig(null, projectConfig);
 
-      expect(result).toEqual(projectConfig);
-      expect(result).toBe(projectConfig); // Should return the exact same reference
+      expect(result).toEqual({
+        ...projectConfig,
+        hasUserConfig: false,
+      });
+      // No longer the same reference since we add hasUserConfig
+      expect(result).not.toBe(projectConfig);
     });
 
-    it("should return project config when user config is null", () => {
+    it("should return project config with hasUserConfig when user config is null", () => {
       const projectConfig = createProjectConfig();
 
       // TypeScript doesn't allow null, but testing defensive programming
-      const result = mergeConfigs(projectConfig, null as any);
+      const result = mergeUserProjectConfig(null as any, projectConfig);
 
-      expect(result).toEqual(projectConfig);
+      expect(result).toEqual({
+        ...projectConfig,
+        hasUserConfig: false,
+      });
     });
   });
 
-  describe("server merging", () => {
-    it("should combine servers when names are unique", () => {
+  describe("server handling", () => {
+    it("should only include project servers, not user servers", () => {
       const projectConfig = createProjectConfig({
         mcpServers: {
           "project-server": {
@@ -71,19 +75,18 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
+      // User servers are NOT included in merged config (they run with --user flag)
       expect(result.mcpServers).toEqual({
-        "user-server": {
-          http: { url: "http://user.local" },
-        },
         "project-server": {
           http: { url: "http://project.local" },
         },
       });
+      expect(result.hasUserConfig).toBe(true);
     });
 
-    it("should use project server when names conflict", () => {
+    it("should always use project servers regardless of user servers", () => {
       const projectConfig = createProjectConfig({
         mcpServers: {
           "conflicting-server": {
@@ -100,14 +103,14 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
-      expect(result.mcpServers["conflicting-server"]).toEqual({
-        http: { url: "http://project.local" },
-      });
+      // Only project servers are included
+      expect(result.mcpServers).toEqual(projectConfig.mcpServers);
+      expect(result.hasUserConfig).toBe(true);
     });
 
-    it("should handle empty mcpServers objects", () => {
+    it("should not include user servers even when project has no servers", () => {
       const projectConfig = createProjectConfig({
         mcpServers: {},
       });
@@ -120,13 +123,11 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
-      expect(result.mcpServers).toEqual({
-        "user-server": {
-          http: { url: "http://user.local" },
-        },
-      });
+      // User servers are never included in merged config
+      expect(result.mcpServers).toEqual({});
+      expect(result.hasUserConfig).toBe(true);
     });
   });
 
@@ -144,7 +145,7 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.hosts).toEqual({
         cursor: false,
@@ -152,7 +153,7 @@ describe("mergeConfigs", () => {
       });
     });
 
-    it("should use project host value when keys conflict", () => {
+    it("should use user host value when explicitly set", () => {
       const projectConfig = createProjectConfig({
         hosts: {
           "claude-desktop": true,
@@ -165,9 +166,10 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
-      expect((result.hosts as any)?.["claude-desktop"]).toBe(true);
+      // User explicit true/false overrides project setting
+      expect((result.hosts as any)?.["claude-desktop"]).toBe(false);
     });
 
     it("should handle empty hosts objects", () => {
@@ -181,7 +183,7 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.hosts).toEqual({
         cursor: true,
@@ -204,7 +206,7 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.options).toEqual({
         extraAllowRead: ["/user/path"],
@@ -226,7 +228,7 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.options?.logMcpTraffic).toBe(true);
     });
@@ -242,7 +244,7 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.options).toEqual({
         extraAllowRead: ["/user/path"],
@@ -263,7 +265,7 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.options).toEqual({
         extraAllowWrite: ["/user/write"],
@@ -283,7 +285,7 @@ describe("mergeConfigs", () => {
         version: 1, // This should be ignored
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.version).toBe(1);
     });
@@ -299,7 +301,7 @@ describe("mergeConfigs", () => {
 
       const userConfig = createUserConfig();
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.env).toEqual(projectEnv);
     });
@@ -310,7 +312,7 @@ describe("mergeConfigs", () => {
 
       const userConfig = createUserConfig();
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(Object.prototype.hasOwnProperty.call(result, "env")).toBe(false);
     });
@@ -322,7 +324,7 @@ describe("mergeConfigs", () => {
 
       const userConfig = createUserConfig();
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result.env).toEqual({});
       expect(Object.prototype.hasOwnProperty.call(result, "env")).toBe(true);
@@ -343,13 +345,15 @@ describe("mergeConfigs", () => {
         options: {},
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       expect(result).toEqual({
         version: 1,
         mcpServers: {},
         hosts: {},
         options: {},
+        hasUserConfig: true,
+        userConfig,
       });
     });
 
@@ -374,10 +378,13 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
-      expect(result.mcpServers["user-only-server"]).toBeDefined();
+      // User servers are NOT included
+      expect(result.mcpServers["user-only-server"]).toBeUndefined();
+      // User hosts ARE included
       expect((result.hosts as any)?.cursor).toBe(true);
+      // User options ARE included
       expect(result.options?.extraAllowRead).toBeDefined();
     });
 
@@ -402,7 +409,7 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
       // Verify the result satisfies SettingsProject type structure
       expect(typeof result.version).toBe("number");
@@ -411,11 +418,8 @@ describe("mergeConfigs", () => {
       expect(typeof result.hosts).toBe("object");
       expect(typeof result.options).toBe("object");
 
-      // Verify specific merged content
-      expect(Object.keys(result.mcpServers)).toEqual([
-        "user-server",
-        "test-server",
-      ]);
+      // Verify specific merged content - only project server
+      expect(Object.keys(result.mcpServers)).toEqual(["test-server"]);
     });
 
     it("should handle complex nested merging scenarios", () => {
@@ -456,17 +460,17 @@ describe("mergeConfigs", () => {
         },
       });
 
-      const result = mergeConfigs(projectConfig, userConfig);
+      const result = mergeUserProjectConfig(userConfig, projectConfig);
 
-      // Verify server merging
+      // Verify server handling - only project servers included
       expect(result.mcpServers["shared-server"]).toEqual({
         node: { package: "project-pkg", version: "1.0.0" },
       });
       expect(result.mcpServers["project-only"]).toBeDefined();
-      expect(result.mcpServers["user-only"]).toBeDefined();
+      expect(result.mcpServers["user-only"]).toBeUndefined(); // User servers NOT included
 
       // Verify host merging
-      expect((result.hosts as any)?.["claude-desktop"]).toBe(true); // Project wins
+      expect((result.hosts as any)?.["claude-desktop"]).toBe(false); // User wins when explicitly set
       expect((result.hosts as any)?.cursor).toBe(false);
       expect((result.hosts as any)?.zed).toBe(true);
 

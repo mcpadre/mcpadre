@@ -13,7 +13,10 @@ import {
   getServerDirectoryPath,
 } from "./index.js";
 
-import type { WorkspaceContext } from "../../config/types/index.js";
+import type {
+  ProjectWorkspaceContext,
+  WorkspaceContext,
+} from "../../config/types/index.js";
 import type { ResolvedPath } from "../types/index.js";
 
 // Helper function to create a WorkspaceContext for testing
@@ -30,8 +33,9 @@ function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
     workspaceDir,
     mergedConfig: config,
     projectConfig: config,
-    userConfig: undefined,
-  };
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
+    userConfig: config,
+  } as ProjectWorkspaceContext;
 }
 
 describe("Server Directory Utilities", () => {

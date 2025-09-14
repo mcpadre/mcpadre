@@ -59,15 +59,17 @@ export async function upgradeServers(
       ? {
           workspaceType: "user",
           workspaceDir: workingDir,
+          userConfigPath: `${workingDir}/mcpadre.yaml`,
           mergedConfig: config as SettingsProject,
           userConfig: config as SettingsUser,
         }
       : {
           workspaceType: "project",
           workspaceDir: workingDir,
+          projectConfigPath: `${workingDir}/mcpadre.yaml`,
           mergedConfig: config as SettingsProject,
           projectConfig: config as SettingsProject,
-          userConfig: undefined,
+          userConfig: config as SettingsUser,
         };
 
   const warnings: UpgradeWarning[] = [];

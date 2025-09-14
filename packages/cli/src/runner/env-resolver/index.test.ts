@@ -12,6 +12,7 @@ import { resolveEnvVars } from "./index.js";
 import type {
   EnvStringTemplate,
   EnvValue,
+  ProjectWorkspaceContext,
   WorkspaceContext,
 } from "../../config/types/index.js";
 
@@ -27,10 +28,11 @@ function createTestWorkspaceContext(workspaceDir: string): WorkspaceContext {
   return {
     workspaceType: "project",
     workspaceDir,
+    projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
     mergedConfig: config,
     projectConfig: config,
-    userConfig: undefined,
-  };
+    userConfig: config,
+  } as ProjectWorkspaceContext;
 }
 
 describe("resolveEnvVars", () => {

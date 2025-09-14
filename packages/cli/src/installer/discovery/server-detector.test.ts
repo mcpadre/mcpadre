@@ -33,6 +33,7 @@ function createTestWorkspaceContext(
     return {
       workspaceType: "user",
       workspaceDir,
+      userConfigPath: `${workspaceDir}/mcpadre.yaml`,
       mergedConfig: baseConfig,
       userConfig: baseConfig,
     };
@@ -42,7 +43,8 @@ function createTestWorkspaceContext(
       workspaceDir,
       mergedConfig: baseConfig,
       projectConfig: baseConfig,
-      userConfig: undefined,
+      projectConfigPath: `${workspaceDir}/mcpadre.yaml`,
+      userConfig: baseConfig,
     };
   }
 }

@@ -16,7 +16,6 @@ import {
   loadSettingsUserFromFile,
   validateSettingsUserObject,
 } from "../config/loaders/settings-user-loader.js";
-import { getConfigPath } from "../config/types/index.js";
 import { writeSettingsUserToFile } from "../config/writers/settings-user-writer.js";
 
 import { promptForConfirmation } from "./_utils/interactive-prompts.js";
@@ -24,8 +23,10 @@ import { withConfigContextAndErrorHandling } from "./_utils/with-config-context-
 import { CLI_LOGGER } from "./_deps.js";
 
 import type {
+  ProjectWorkspaceContext,
   SettingsProject,
   SettingsUser,
+  UserWorkspaceContext,
   WorkspaceContext,
 } from "../config/types/index.js";
 
@@ -73,7 +74,10 @@ async function handleEdit(
   CLI_LOGGER.info(`Opening ${configType} configuration for editing...`);
 
   try {
-    const configPath = getConfigPath(context);
+    const configPath =
+      context.workspaceType === "user"
+        ? (context as UserWorkspaceContext).userConfigPath
+        : (context as ProjectWorkspaceContext).projectConfigPath;
 
     // If no user config exists, create a stub one
     if (context.workspaceType === "user") {

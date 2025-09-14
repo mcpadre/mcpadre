@@ -2,7 +2,10 @@
 
 import { Command } from "@commander-js/extra-typings";
 
-import { getConfigPath } from "../../config/types/workspace.js";
+import {
+  type ProjectWorkspaceContext,
+  type UserWorkspaceContext,
+} from "../../config/types/workspace.js";
 import { writeSettingsProjectToFile } from "../../config/writers/settings-project-writer.js";
 import { writeSettingsUserToFile } from "../../config/writers/settings-user-writer.js";
 import { CLI_LOGGER } from "../_deps.js";
@@ -110,7 +113,11 @@ export function makeServerRemoveCommand() {
           const updatedConfig = removeServerFromConfig(config, serverName);
 
           // Write updated config back to file
-          const configPath = getConfigPath(context);
+          const configPath =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfigPath
+              : (context as ProjectWorkspaceContext).projectConfigPath;
+
           if (context.workspaceType === "user") {
             await writeSettingsUserToFile(configPath, updatedConfig);
           } else {

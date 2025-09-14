@@ -3,7 +3,7 @@
 
 import { mkdir, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
-import { join } from "path";
+import { dirname, join } from "path";
 import YAML from "yaml";
 
 import type { SettingsUser } from "../../config/types/index.js";
@@ -251,6 +251,7 @@ export async function runUserModeCommand(
   command: string[],
   options: {
     buffer?: boolean;
+    env?: Record<string, string | undefined>;
   } = {}
 ): Promise<{
   exitCode: number;
@@ -259,9 +260,19 @@ export async function runUserModeCommand(
 }> {
   const args = getUserModeSpawnArgs(userDir, command);
 
+  // Create a fake home directory for test isolation
+  const fakeHomeDir = join(dirname(userDir), "fake-home");
+  await mkdir(fakeHomeDir, { recursive: true });
+
   const result = await spawn(args, {
     cwd: projectDir,
     buffer: options.buffer ?? true,
+    env: {
+      ...options.env,
+      // Override Claude Code's user-level config to use test directory
+      MCPADRE_CLAUDE_CODE_USER_FILE_PATH: join(fakeHomeDir, ".claude.json"),
+      HOME: fakeHomeDir,
+    },
   });
 
   return {
