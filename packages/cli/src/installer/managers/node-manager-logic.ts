@@ -1,6 +1,20 @@
 // pattern: Functional Core
 
+import { type Static } from "@sinclair/typebox";
+
 import type { NodeOptionsV1 } from "../../config/types/v1/server/index.js";
+import type { NodeVersionManagerV1 } from "../../config/types/v1/options.js";
+
+/**
+ * The full set of possible values for the nodeVersionManager option.
+ */
+export type NodeVersionManager = Static<typeof NodeVersionManagerV1>;
+
+/**
+ * The specific version managers we support for reshimming.
+ * This is a subset of NodeVersionManager, excluding 'auto' and 'none'.
+ */
+export type NodeReshimManager = Exclude<NodeVersionManager, "auto" | "none">;
 
 /**
  * Parsed package.json structure for version comparison
@@ -165,7 +179,8 @@ export function generatePackageJson(
     },
   };
 
-  return `${JSON.stringify(packageJsonObj, null, 2)}\n`;
+  return `${JSON.stringify(packageJsonObj, null, 2)}
+`;
 }
 
 /**
@@ -231,4 +246,55 @@ export function generateVersionFiles(nodeVersion: string): VersionFiles {
     nodeVersion: `${nodeVersion}\n`,
     toolVersions: `nodejs ${nodeVersion}\n`,
   };
+}
+
+/**
+ * Determines which reshim command to run based on configuration and environment.
+ * This is a pure function, testable without side-effects.
+ *
+ * @param managerConfig The user's configured version manager setting.
+ * @param whichPath The path returned by `which` for the relevant binary (e.g., node).
+ * @returns A specific manager to reshim, or "none" if no action is needed.
+ */
+export function determineReshimAction(
+  managerConfig: NodeVersionManager,
+  whichPath: string | null
+): NodeReshimManager | "none" {
+  if (managerConfig === "none") {
+    return "none";
+  }
+
+  if (managerConfig === "asdf") {
+    return "asdf";
+  }
+
+  if (managerConfig === "mise") {
+    return "mise";
+  }
+
+  // auto mode
+  if (!whichPath) {
+    throw new Error(
+      "Cannot determine version manager in 'auto' mode because the base executable (e.g., node) was not found in the PATH."
+    );
+  }
+
+  const hasAsdf = whichPath.includes("asdf");
+  const hasMise = whichPath.includes("mise");
+
+  if (hasAsdf && hasMise) {
+    throw new Error(
+      `Your PATH is configured to use both asdf and mise for the same tool, which is not supported. Path: ${whichPath}`
+    );
+  }
+
+  if (hasAsdf) {
+    return "asdf";
+  }
+
+  if (hasMise) {
+    return "mise";
+  }
+
+  return "none";
 }

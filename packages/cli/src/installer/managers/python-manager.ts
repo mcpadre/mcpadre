@@ -2,6 +2,7 @@
 
 import { mkdir, readFile, stat, unlink, writeFile } from "fs/promises";
 import { join } from "path";
+import which from "which";
 
 import { createCommand } from "../../utils/command/index.js";
 import { PythonPackageError } from "../../utils/errors.js";
@@ -9,6 +10,7 @@ import { addToServerGitignore } from "../gitignore-manager.js";
 
 import {
   determinePythonUpgrade,
+  determineReshimAction,
   generatePyprojectToml,
   generateVersionFiles,
   parsePyprojectToml,
@@ -16,6 +18,7 @@ import {
 
 import type { WorkspaceContext } from "../../config/types/index.js";
 import type { PythonOptionsV1 } from "../../config/types/v1/server/index.js";
+import type { PythonReshimManager } from "./python-manager-logic.js";
 import type { Logger } from "pino";
 
 /**
@@ -62,7 +65,7 @@ export class PythonManager {
   private createUvCommand(
     args: string[],
     serverDir: string,
-    logger: Logger
+    logger: Logger,
   ): { output(): Promise<string> } {
     // Try direct uv first
     const directUvCmd = createCommand("uv", logger)
@@ -90,7 +93,7 @@ export class PythonManager {
    * Install Python MCP server with uv dependency management
    */
   async installPython(
-    options: PythonInstallOptions
+    options: PythonInstallOptions,
   ): Promise<PythonInstallResult> {
     const {
       serverName,
@@ -108,7 +111,7 @@ export class PythonManager {
         version: python.version,
         pythonVersion: python.pythonVersion,
       },
-      "Installing Python MCP server"
+      "Installing Python MCP server",
     );
 
     try {
@@ -132,11 +135,11 @@ export class PythonManager {
           await this.managePythonVersionFile(
             serverDir,
             python.pythonVersion,
-            logger
+            logger,
           );
         }
         // Check system prerequisites before attempting install
-        await this.checkSystemPrerequisites(serverDir, logger);
+        await this.checkSystemPrerequisites(serverDir, options.context, logger);
       }
 
       // Handle dependency management
@@ -154,7 +157,7 @@ export class PythonManager {
         (dependencyResult.dependenciesInstalled ||
           dependencyResult.environmentSynced)
       ) {
-        await this.checkSystemPrerequisites(serverDir, logger);
+        await this.checkSystemPrerequisites(serverDir, options.context, logger);
       }
 
       // Add server-specific gitignore patterns for Python files
@@ -163,7 +166,7 @@ export class PythonManager {
         await addToServerGitignore(serverDir, pythonPatterns);
         logger.debug(
           { patterns: pythonPatterns },
-          "Added Python gitignore patterns"
+          "Added Python gitignore patterns",
         );
       } catch (error) {
         logger.warn({ error }, "Failed to update server .gitignore for Python");
@@ -190,7 +193,7 @@ export class PythonManager {
   private async managePythonVersionFile(
     serverDir: string,
     pythonVersion: string,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     const pythonVersionPath = join(serverDir, ".python-version");
     const toolVersionsPath = join(serverDir, ".tool-versions");
@@ -203,18 +206,18 @@ export class PythonManager {
       await writeFile(pythonVersionPath, versionFiles.pythonVersion, "utf8");
       logger.debug(
         { pythonVersion, path: pythonVersionPath },
-        "Written .python-version file"
+        "Written .python-version file",
       );
 
       // Write .tool-versions for asdf compatibility
       await writeFile(toolVersionsPath, versionFiles.toolVersions, "utf8");
       logger.debug(
         { pythonVersion, path: toolVersionsPath },
-        "Written .tool-versions file"
+        "Written .tool-versions file",
       );
     } catch (error) {
       throw new PythonPackageError(
-        `Failed to write Python version files: ${error}`
+        `Failed to write Python version files: ${error}`,
       );
     }
   }
@@ -225,7 +228,8 @@ export class PythonManager {
    */
   private async checkSystemPrerequisites(
     serverDir: string,
-    logger: Logger
+    context: WorkspaceContext,
+    logger: Logger,
   ): Promise<void> {
     // Check python --version in server directory
     try {
@@ -238,7 +242,7 @@ export class PythonManager {
       logger.debug({ pythonVersion }, "Python version check successful");
     } catch (error) {
       throw new Error(
-        `Python is not available or not working. Make sure Python is installed and accessible via PATH, or use a tool like mise/asdf to manage Python versions. Error: ${error}`
+        `Python is not available or not working. Make sure Python is installed and accessible via PATH, or use a tool like mise/asdf to manage Python versions. Error: ${error}`,
       );
     }
 
@@ -262,6 +266,42 @@ export class PythonManager {
         await pipInstallCmd.output();
         logger.info("Successfully installed uv via pip");
 
+        // After successful install, run reshim if needed
+        const managerConfig =
+          context.mergedConfig.options?.pythonVersionManager ?? "auto";
+
+        const whichPath = await which("python").catch(() => null);
+        const action = determineReshimAction(managerConfig, whichPath);
+
+        const runReshim = async (manager: PythonReshimManager): Promise<void> => {
+          const command = manager;
+          const args = ["reshim", "python"];
+          logger.debug(`Running ${command} ${args.join(" ")}...`);
+          const reshimCmd = createCommand(command, logger).addArgs(args);
+          try {
+            await reshimCmd.output();
+            logger.debug(`Successfully ran ${command} reshim.`);
+          } catch (reshimError) {
+            logger.warn(
+              `Failed to run ${command} reshim. You may need to run it manually.`,
+            );
+            logger.debug(
+              { error: reshimError },
+              `Error running ${command} reshim`,
+            );
+          }
+        };
+
+        switch (action) {
+          case "asdf":
+          case "mise":
+            await runReshim(action);
+            break;
+          case "none":
+            // No action needed
+            break;
+        }
+
         // Try to verify uv is available, but don't fail if asdf can't find it
         // Since we installed via pip, it should be accessible via python -m uv
         try {
@@ -272,12 +312,12 @@ export class PythonManager {
           const uvVersion = await uvVerifyCmd.output();
           logger.debug(
             { uvVersion: uvVersion.trim() },
-            "uv installation verified via direct access"
+            "uv installation verified via direct access",
           );
         } catch {
           // If direct uv access fails (common with asdf), try python -m uv
           logger.debug(
-            "Direct uv access failed, verifying via python -m uv..."
+            "Direct uv access failed, verifying via python -m uv...",
           );
           const pythonUvCmd = createCommand("python", logger)
             .addArgs(["-m", "uv", "--version"])
@@ -286,12 +326,12 @@ export class PythonManager {
           const uvVersion = await pythonUvCmd.output();
           logger.debug(
             { uvVersion: uvVersion.trim() },
-            "uv installation verified via python -m uv"
+            "uv installation verified via python -m uv",
           );
         }
       } catch (pipError) {
         throw new Error(
-          `Failed to install uv via pip. Please ensure Python and pip are working. Original uv error: ${error}. Pip installation error: ${pipError}`
+          `Failed to install uv via pip. Please ensure Python and pip are working. Original uv error: ${error}. Pip installation error: ${pipError}`,
         );
       }
     }
@@ -346,7 +386,7 @@ export class PythonManager {
           python,
           serverDir,
           upgradeDecision.changes,
-          logger
+          logger,
         );
       case "SYNC":
         return await this.syncEnvironment(python, serverDir, logger);
@@ -354,7 +394,9 @@ export class PythonManager {
         return {
           dependenciesInstalled: false,
           environmentSynced: false,
-          message: `Version changes detected but upgrade not permitted: ${upgradeDecision.changes.join(", ")}`,
+          message: `Version changes detected but upgrade not permitted: ${upgradeDecision.changes.join(
+            ", "
+          )}`,
           upgradeOccurred: false,
         };
       default:
@@ -368,7 +410,7 @@ export class PythonManager {
   private async createNewProject(
     python: PythonOptionsV1,
     serverDir: string,
-    logger: Logger
+    logger: Logger,
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -380,7 +422,7 @@ export class PythonManager {
       await this.managePythonVersionFile(
         serverDir,
         python.pythonVersion,
-        logger
+        logger,
       );
     }
 
@@ -413,7 +455,7 @@ export class PythonManager {
   private async syncEnvironment(
     python: PythonOptionsV1,
     serverDir: string,
-    logger: Logger
+    logger: Logger,
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -425,7 +467,7 @@ export class PythonManager {
       await this.managePythonVersionFile(
         serverDir,
         python.pythonVersion,
-        logger
+        logger,
       );
     }
 
@@ -448,7 +490,7 @@ export class PythonManager {
     python: PythonOptionsV1,
     serverDir: string,
     changes: string[],
-    logger: Logger
+    logger: Logger,
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -465,7 +507,7 @@ export class PythonManager {
       await this.managePythonVersionFile(
         serverDir,
         python.pythonVersion,
-        logger
+        logger,
       );
     }
 

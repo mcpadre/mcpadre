@@ -158,8 +158,7 @@ export function generatePyprojectToml(
     ? `requires-python = "==${python.pythonVersion}"`
     : "";
 
-  return `[project]
-name = "mcpadre-deps-${serverName}"
+  return `[project]name = "mcpadre-deps-${serverName}"
 version = "0.0.0"${pythonVersionLine ? `\n${pythonVersionLine}` : ""}
 dependencies = [
     "${python.package}==${python.version}"
@@ -219,4 +218,60 @@ export function generateVersionFiles(pythonVersion: string): VersionFiles {
     pythonVersion: `${pythonVersion}\n`,
     toolVersions: `python ${pythonVersion}\n`,
   };
+}
+
+/**
+ * The version managers we support for reshimming.
+ */
+export type ReshimManager = "asdf" | "mise";
+
+/**
+ * Determines which reshim command to run based on configuration and environment.
+ * This is a pure function, testable without side-effects.
+ *
+ * @param managerConfig The user's configured version manager setting.
+ * @param whichPath The path returned by `which` for the relevant binary (e.g., python).
+ * @returns A single manager to reshim, or "none" if none is needed.
+ */
+export function determineReshimAction(
+  managerConfig: "auto" | "asdf" | "mise" | "none",
+  whichPath: string | null
+): ReshimManager | "none" {
+  if (managerConfig === "none") {
+    return "none";
+  }
+
+  if (managerConfig === "asdf") {
+    return "asdf";
+  }
+
+  if (managerConfig === "mise") {
+    return "mise";
+  }
+
+  // auto mode
+  if (!whichPath) {
+    throw new Error(
+      "Cannot determine version manager in 'auto' mode because the base executable (e.g., python) was not found in the PATH."
+    );
+  }
+
+  const hasAsdf = whichPath.includes("asdf");
+  const hasMise = whichPath.includes("mise");
+
+  if (hasAsdf && hasMise) {
+    throw new Error(
+      `Your PATH is configured to use both asdf and mise for the same tool, which is not supported. Path: ${whichPath}`
+    );
+  }
+
+  if (hasAsdf) {
+    return "asdf";
+  }
+
+  if (hasMise) {
+    return "mise";
+  }
+
+  return "none";
 }
