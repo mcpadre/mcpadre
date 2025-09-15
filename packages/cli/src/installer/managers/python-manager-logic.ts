@@ -2,7 +2,16 @@
 
 import { parse as parseToml } from "@iarna/toml";
 
-import type { PythonOptionsV1 } from "../../config/types/v1/server/index.js";
+import {
+  PythonOptions,
+  PythonVersionManager,
+} from "../../config/types/index.js";
+
+/**
+ * The specific version managers we support for reshimming.
+ * This is a subset of PythonVersionManager, excluding 'auto' and 'none'.
+ */
+export type PythonReshimManager = Exclude<PythonVersionManager, "auto">;
 
 /**
  * Parsed pyproject.toml structure for version comparison
@@ -56,7 +65,7 @@ export interface UpgradeOptions {
  */
 export function determinePythonUpgrade(
   existingToml: ParsedPyprojectToml | null,
-  newConfig: PythonOptionsV1,
+  newConfig: PythonOptions,
   options: UpgradeOptions
 ): VersionChangeResult {
   // No existing configuration - fresh install
@@ -108,7 +117,7 @@ export function determinePythonUpgrade(
  */
 export function detectVersionChanges(
   existingToml: ParsedPyprojectToml,
-  newPython: PythonOptionsV1
+  newPython: PythonOptions
 ): { hasChanges: boolean; changes: string[] } {
   const changes: string[] = [];
 
@@ -152,7 +161,7 @@ export function detectVersionChanges(
  */
 export function generatePyprojectToml(
   serverName: string,
-  python: PythonOptionsV1
+  python: PythonOptions
 ): string {
   const pythonVersionLine = python.pythonVersion
     ? `requires-python = "==${python.pythonVersion}"`
@@ -221,11 +230,6 @@ export function generateVersionFiles(pythonVersion: string): VersionFiles {
 }
 
 /**
- * The version managers we support for reshimming.
- */
-export type ReshimManager = "asdf" | "mise";
-
-/**
  * Determines which reshim command to run based on configuration and environment.
  * This is a pure function, testable without side-effects.
  *
@@ -236,7 +240,7 @@ export type ReshimManager = "asdf" | "mise";
 export function determineReshimAction(
   managerConfig: "auto" | "asdf" | "mise" | "none",
   whichPath: string | null
-): ReshimManager | "none" {
+): PythonReshimManager {
   if (managerConfig === "none") {
     return "none";
   }

@@ -1,20 +1,14 @@
 // pattern: Functional Core
 
-import { type Static } from "@sinclair/typebox";
+import { NodeVersionManager } from "../../config/types/index.js";
 
 import type { NodeOptionsV1 } from "../../config/types/v1/server/index.js";
-import type { NodeVersionManagerV1 } from "../../config/types/v1/options.js";
-
-/**
- * The full set of possible values for the nodeVersionManager option.
- */
-export type NodeVersionManager = Static<typeof NodeVersionManagerV1>;
 
 /**
  * The specific version managers we support for reshimming.
  * This is a subset of NodeVersionManager, excluding 'auto' and 'none'.
  */
-export type NodeReshimManager = Exclude<NodeVersionManager, "auto" | "none">;
+export type NodeReshimManager = Exclude<NodeVersionManager, "auto">;
 
 /**
  * Parsed package.json structure for version comparison
@@ -259,7 +253,7 @@ export function generateVersionFiles(nodeVersion: string): VersionFiles {
 export function determineReshimAction(
   managerConfig: NodeVersionManager,
   whichPath: string | null
-): NodeReshimManager | "none" {
+): NodeReshimManager {
   if (managerConfig === "none") {
     return "none";
   }

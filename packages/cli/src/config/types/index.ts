@@ -21,6 +21,7 @@ export {
   NodeVersionManagerV1 as NodeVersionManager,
   ProjectOptionsV1 as ProjectOptions,
   PythonMcpServerV1 as PythonMcpServer,
+  PythonOptionsV1 as PythonOptions,
   PythonVersionManagerV1 as PythonVersionManager,
   SandboxOptionsV1 as SandboxOptions,
   ServerSpecV1 as ServerSpec,

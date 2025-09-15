@@ -38,7 +38,9 @@ export function findLogMessageInJSONL(
       }
     } catch (error) {
       // Non-JSON lines in JSONL output indicate a bug - this should fail the test
+      /* eslint-disable-next-line no-console */
       console.error(`Non-JSON line found in JSONL output: ${line}`);
+      /* eslint-disable-next-line no-console */
       console.error(`Parse error: ${error}`);
       throw new Error(`Invalid JSONL output: non-JSON line found: ${line}`);
     }

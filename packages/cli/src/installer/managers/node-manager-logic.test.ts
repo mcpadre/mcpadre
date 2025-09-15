@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { determineReshimAction } from "./node-manager-logic.js";
 
 describe("determineReshimAction", () => {
@@ -19,12 +20,18 @@ describe("determineReshimAction", () => {
 
   describe("auto mode", () => {
     it("should return 'asdf' if path contains 'asdf'", () => {
-      const action = determineReshimAction("auto", "/home/user/.asdf/shims/node");
+      const action = determineReshimAction(
+        "auto",
+        "/home/user/.asdf/shims/node"
+      );
       expect(action).toBe("asdf");
     });
 
     it("should return 'mise' if path contains 'mise'", () => {
-      const action = determineReshimAction("auto", "/home/user/.mise/shims/node");
+      const action = determineReshimAction(
+        "auto",
+        "/home/user/.mise/shims/node"
+      );
       expect(action).toBe("mise");
     });
 

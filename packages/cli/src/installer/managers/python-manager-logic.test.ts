@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
+
 import { determineReshimAction } from "./python-manager-logic.js";
 
 describe("determineReshimAction", () => {
   it("should return 'none' if manager is 'none'", () => {
-    const action = determineReshimAction("none", "/home/user/.asdf/shims/python");
+    const action = determineReshimAction(
+      "none",
+      "/home/user/.asdf/shims/python"
+    );
     expect(action).toBe("none");
   });
 
@@ -19,12 +23,18 @@ describe("determineReshimAction", () => {
 
   describe("auto mode", () => {
     it("should return 'asdf' if path contains 'asdf'", () => {
-      const action = determineReshimAction("auto", "/home/user/.asdf/shims/python");
+      const action = determineReshimAction(
+        "auto",
+        "/home/user/.asdf/shims/python"
+      );
       expect(action).toBe("asdf");
     });
 
     it("should return 'mise' if path contains 'mise'", () => {
-      const action = determineReshimAction("auto", "/home/user/.mise/shims/python");
+      const action = determineReshimAction(
+        "auto",
+        "/home/user/.mise/shims/python"
+      );
       expect(action).toBe("mise");
     });
 
