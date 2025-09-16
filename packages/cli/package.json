@@ -1,6 +1,6 @@
 {
   "name": "mcpadre",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Your Swiss Army samurai sword for managing MCP servers.",
   "type": "module",
   "main": "./dist/index.js",
