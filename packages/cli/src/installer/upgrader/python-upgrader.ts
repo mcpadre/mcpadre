@@ -5,6 +5,7 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 
 import { createCommand } from "../../utils/command/index.js";
+import { determinePythonRequirement } from "../../utils/python/requirements.js";
 import { generatePyprojectToml } from "../managers/python-manager-logic.js";
 import { auditPythonPackage } from "../outdated/pypi-detector.js";
 
@@ -44,8 +45,21 @@ export async function upgradePythonServer(
       ...(pythonVersion && { pythonVersion }),
     };
 
+    // Determine Python version requirement
+    const requiresPython = await determinePythonRequirement(
+      pythonVersion,
+      packageName,
+      targetVersion, // Note: use targetVersion for the upgrade
+      serverDir,
+      logger
+    );
+
     // Generate new pyproject.toml content
-    const newPyprojectContent = generatePyprojectToml(serverName, pythonConfig);
+    const newPyprojectContent = generatePyprojectToml(
+      serverName,
+      pythonConfig,
+      requiresPython
+    );
 
     // Write updated pyproject.toml
     await writeFile(pyprojectPath, newPyprojectContent, "utf8");

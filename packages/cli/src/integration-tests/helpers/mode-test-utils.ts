@@ -119,10 +119,16 @@ export function createUserModeContext(
 export function createProjectModeContext(
   tempProject: TempProject
 ): ModeContext {
+  // Create a fake user directory to prevent interference from real user config
+  const fakeUserDir = `${tempProject.path}/.fake-user`;
+
   return {
     mode: "project",
     flags: [],
-    env: {},
+    env: {
+      MCPADRE_USER_DIR: fakeUserDir,
+      HOME: `${tempProject.path}/fake-home`,
+    },
     getConfigPath: () => tempProject.configPath,
     getConfigDir: () => tempProject.path,
     modeLabel: "project configuration",
@@ -132,6 +138,11 @@ export function createProjectModeContext(
     },
     setup: async () => {
       // Project setup is already handled by the tempProject creation
+      // Create fake directories to prevent interference from real user config
+      await fs.promises.mkdir(fakeUserDir, { recursive: true });
+      await fs.promises.mkdir(`${tempProject.path}/fake-home`, {
+        recursive: true,
+      });
     },
     cleanup: async () => {
       // Project cleanup is handled separately
