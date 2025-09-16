@@ -1,6 +1,6 @@
 // pattern: Functional Core
 
-import { parse as parseToml } from "@iarna/toml";
+import { parse as parseToml, stringify as stringifyToml } from "@iarna/toml";
 
 import {
   PythonOptions,
@@ -163,16 +163,23 @@ export function generatePyprojectToml(
   serverName: string,
   python: PythonOptions
 ): string {
-  const pythonVersionLine = python.pythonVersion
-    ? `requires-python = "==${python.pythonVersion}"`
-    : "";
+  // Build the project structure as an object - using explicit types for TOML serialization
+  const project: Record<string, string | string[]> = {
+    name: `mcpadre-deps-${serverName}`,
+    version: "0.0.0",
+    dependencies: [`${python.package}==${python.version}`],
+  };
 
-  return `[project]name = "mcpadre-deps-${serverName}"
-version = "0.0.0"${pythonVersionLine ? `\n${pythonVersionLine}` : ""}
-dependencies = [
-    "${python.package}==${python.version}"
-]
-`;
+  // Add requires-python if specified
+  if (python.pythonVersion) {
+    project["requires-python"] = `==${python.pythonVersion}`;
+  }
+
+  // Use TOML library to serialize properly
+  const tomlData: Record<string, Record<string, string | string[]>> = {
+    project,
+  };
+  return stringifyToml(tomlData);
 }
 
 /**

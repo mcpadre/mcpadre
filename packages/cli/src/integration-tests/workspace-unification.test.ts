@@ -529,7 +529,7 @@ describe("Workspace Unification", () => {
     it("should ensure path consistency across different server names", () => {
       fc.assert(
         fc.property(
-          fc.array(serverNameArbitrary, { minLength: 2, maxLength: 10 }),
+          fc.uniqueArray(serverNameArbitrary, { minLength: 2, maxLength: 10 }),
           serverNames => {
             const paths = serverNames.map(name =>
               getServerPath(userContext, name)
