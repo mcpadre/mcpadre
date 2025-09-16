@@ -262,7 +262,7 @@ describe("PythonManager", () => {
 
     it("should throw when which(python) returns null in auto mode", async () => {
       setupUvNotInstalled();
-      vi.mocked(which).mockResolvedValue(null); // which("python") returns null
+      vi.mocked(which).mockRejectedValue(new Error("python not found")); // which("python") throws, caught as null
       const determineSpy = vi
         .spyOn(logic, "determineReshimAction")
         .mockImplementation(() => {

@@ -255,7 +255,7 @@ describe("NodeManager", () => {
 
     it("should throw when which(node) returns null in auto mode", async () => {
       setupPnpmNotInstalled();
-      vi.mocked(which).mockResolvedValue(null); // which("node") returns null
+      vi.mocked(which).mockRejectedValue(new Error("node not found")); // which("node") throws, caught as null
       const determineSpy = vi
         .spyOn(logic, "determineReshimAction")
         .mockImplementation(() => {
