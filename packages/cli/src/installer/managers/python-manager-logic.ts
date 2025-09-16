@@ -157,11 +157,13 @@ export function detectVersionChanges(
  *
  * @param serverName Name of the server (used in project name)
  * @param python Python configuration
+ * @param requiresPython Python version requirement (from config, PyPI, or system)
  * @returns Complete pyproject.toml content
  */
 export function generatePyprojectToml(
   serverName: string,
-  python: PythonOptions
+  python: PythonOptions,
+  requiresPython: string
 ): string {
   // Build the project structure as an object - using explicit types for TOML serialization
   const project: Record<string, string | string[]> = {
@@ -170,10 +172,9 @@ export function generatePyprojectToml(
     dependencies: [`${python.package}==${python.version}`],
   };
 
-  // Add requires-python if specified
-  if (python.pythonVersion) {
-    project["requires-python"] = `==${python.pythonVersion}`;
-  }
+  // Add requires-python - we always have a value now
+  // It's either from explicit config (==X.Y.Z), PyPI (their format), or system (>=X.Y)
+  project["requires-python"] = requiresPython;
 
   // Use TOML library to serialize properly
   const tomlData: Record<string, Record<string, string | string[]>> = {

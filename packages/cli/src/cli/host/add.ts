@@ -166,7 +166,7 @@ Examples:
             await writeSettingsProjectToFile(configPath, updatedConfig);
           }
 
-          CLI_LOGGER.error(
+          CLI_LOGGER.info(
             `Added host '${hostName}' to ${context.workspaceType} configuration`
           );
           const installCmd =

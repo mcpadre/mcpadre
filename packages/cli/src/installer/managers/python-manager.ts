@@ -6,6 +6,7 @@ import which from "which";
 
 import { createCommand } from "../../utils/command/index.js";
 import { PythonPackageError } from "../../utils/errors.js";
+import { determinePythonRequirement } from "../../utils/python/requirements.js";
 import { addToServerGitignore } from "../gitignore-manager.js";
 
 import {
@@ -65,7 +66,7 @@ export class PythonManager {
   private createUvCommand(
     args: string[],
     serverDir: string,
-    logger: Logger,
+    logger: Logger
   ): { output(): Promise<string> } {
     // Try direct uv first
     const directUvCmd = createCommand("uv", logger)
@@ -93,7 +94,7 @@ export class PythonManager {
    * Install Python MCP server with uv dependency management
    */
   async installPython(
-    options: PythonInstallOptions,
+    options: PythonInstallOptions
   ): Promise<PythonInstallResult> {
     const {
       serverName,
@@ -111,7 +112,7 @@ export class PythonManager {
         version: python.version,
         pythonVersion: python.pythonVersion,
       },
-      "Installing Python MCP server",
+      "Installing Python MCP server"
     );
 
     try {
@@ -135,7 +136,7 @@ export class PythonManager {
           await this.managePythonVersionFile(
             serverDir,
             python.pythonVersion,
-            logger,
+            logger
           );
         }
         // Check system prerequisites before attempting install
@@ -166,7 +167,7 @@ export class PythonManager {
         await addToServerGitignore(serverDir, pythonPatterns);
         logger.debug(
           { patterns: pythonPatterns },
-          "Added Python gitignore patterns",
+          "Added Python gitignore patterns"
         );
       } catch (error) {
         logger.warn({ error }, "Failed to update server .gitignore for Python");
@@ -193,7 +194,7 @@ export class PythonManager {
   private async managePythonVersionFile(
     serverDir: string,
     pythonVersion: string,
-    logger: Logger,
+    logger: Logger
   ): Promise<void> {
     const pythonVersionPath = join(serverDir, ".python-version");
     const toolVersionsPath = join(serverDir, ".tool-versions");
@@ -206,18 +207,18 @@ export class PythonManager {
       await writeFile(pythonVersionPath, versionFiles.pythonVersion, "utf8");
       logger.debug(
         { pythonVersion, path: pythonVersionPath },
-        "Written .python-version file",
+        "Written .python-version file"
       );
 
       // Write .tool-versions for asdf compatibility
       await writeFile(toolVersionsPath, versionFiles.toolVersions, "utf8");
       logger.debug(
         { pythonVersion, path: toolVersionsPath },
-        "Written .tool-versions file",
+        "Written .tool-versions file"
       );
     } catch (error) {
       throw new PythonPackageError(
-        `Failed to write Python version files: ${error}`,
+        `Failed to write Python version files: ${error}`
       );
     }
   }
@@ -229,7 +230,7 @@ export class PythonManager {
   private async checkSystemPrerequisites(
     serverDir: string,
     context: WorkspaceContext,
-    logger: Logger,
+    logger: Logger
   ): Promise<void> {
     // Check python --version in server directory
     try {
@@ -242,7 +243,7 @@ export class PythonManager {
       logger.debug({ pythonVersion }, "Python version check successful");
     } catch (error) {
       throw new Error(
-        `Python is not available or not working. Make sure Python is installed and accessible via PATH, or use a tool like mise/asdf to manage Python versions. Error: ${error}`,
+        `Python is not available or not working. Make sure Python is installed and accessible via PATH, or use a tool like mise/asdf to manage Python versions. Error: ${error}`
       );
     }
 
@@ -273,7 +274,9 @@ export class PythonManager {
         const whichPath = await which("python").catch(() => null);
         const action = determineReshimAction(managerConfig, whichPath);
 
-        const runReshim = async (manager: PythonReshimManager): Promise<void> => {
+        const runReshim = async (
+          manager: PythonReshimManager
+        ): Promise<void> => {
           const command = manager;
           const args = ["reshim", "python"];
           logger.debug(`Running ${command} ${args.join(" ")}...`);
@@ -283,11 +286,11 @@ export class PythonManager {
             logger.debug(`Successfully ran ${command} reshim.`);
           } catch (reshimError) {
             logger.warn(
-              `Failed to run ${command} reshim. You may need to run it manually.`,
+              `Failed to run ${command} reshim. You may need to run it manually.`
             );
             logger.debug(
               { error: reshimError },
-              `Error running ${command} reshim`,
+              `Error running ${command} reshim`
             );
           }
         };
@@ -312,12 +315,12 @@ export class PythonManager {
           const uvVersion = await uvVerifyCmd.output();
           logger.debug(
             { uvVersion: uvVersion.trim() },
-            "uv installation verified via direct access",
+            "uv installation verified via direct access"
           );
         } catch {
           // If direct uv access fails (common with asdf), try python -m uv
           logger.debug(
-            "Direct uv access failed, verifying via python -m uv...",
+            "Direct uv access failed, verifying via python -m uv..."
           );
           const pythonUvCmd = createCommand("python", logger)
             .addArgs(["-m", "uv", "--version"])
@@ -326,12 +329,12 @@ export class PythonManager {
           const uvVersion = await pythonUvCmd.output();
           logger.debug(
             { uvVersion: uvVersion.trim() },
-            "uv installation verified via python -m uv",
+            "uv installation verified via python -m uv"
           );
         }
       } catch (pipError) {
         throw new Error(
-          `Failed to install uv via pip. Please ensure Python and pip are working. Original uv error: ${error}. Pip installation error: ${pipError}`,
+          `Failed to install uv via pip. Please ensure Python and pip are working. Original uv error: ${error}. Pip installation error: ${pipError}`
         );
       }
     }
@@ -386,7 +389,7 @@ export class PythonManager {
           python,
           serverDir,
           upgradeDecision.changes,
-          logger,
+          logger
         );
       case "SYNC":
         return await this.syncEnvironment(python, serverDir, logger);
@@ -410,7 +413,7 @@ export class PythonManager {
   private async createNewProject(
     python: PythonOptionsV1,
     serverDir: string,
-    logger: Logger,
+    logger: Logger
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -422,15 +425,28 @@ export class PythonManager {
       await this.managePythonVersionFile(
         serverDir,
         python.pythonVersion,
-        logger,
+        logger
       );
     }
 
     const pyprojectPath = join(serverDir, "pyproject.toml");
     const serverName = serverDir.split("/").pop() ?? "unknown";
 
+    // Determine Python version requirement
+    const requiresPython = await determinePythonRequirement(
+      python.pythonVersion,
+      python.package,
+      python.version,
+      serverDir,
+      logger
+    );
+
     // Generate pyproject.toml content using pure function
-    const pyprojectContent = generatePyprojectToml(serverName, python);
+    const pyprojectContent = generatePyprojectToml(
+      serverName,
+      python,
+      requiresPython
+    );
 
     // Write pyproject.toml
     await writeFile(pyprojectPath, pyprojectContent, "utf8");
@@ -455,7 +471,7 @@ export class PythonManager {
   private async syncEnvironment(
     python: PythonOptionsV1,
     serverDir: string,
-    logger: Logger,
+    logger: Logger
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -467,7 +483,7 @@ export class PythonManager {
       await this.managePythonVersionFile(
         serverDir,
         python.pythonVersion,
-        logger,
+        logger
       );
     }
 
@@ -490,7 +506,7 @@ export class PythonManager {
     python: PythonOptionsV1,
     serverDir: string,
     changes: string[],
-    logger: Logger,
+    logger: Logger
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -507,7 +523,7 @@ export class PythonManager {
       await this.managePythonVersionFile(
         serverDir,
         python.pythonVersion,
-        logger,
+        logger
       );
     }
 
@@ -519,9 +535,22 @@ export class PythonManager {
       // File might not exist, that's okay
     }
 
+    // Determine Python version requirement
+    const requiresPython = await determinePythonRequirement(
+      python.pythonVersion,
+      python.package,
+      python.version,
+      serverDir,
+      logger
+    );
+
     // Generate new pyproject.toml content using pure function
     const serverName = serverDir.split("/").pop() ?? "unknown";
-    const newPyprojectContent = generatePyprojectToml(serverName, python);
+    const newPyprojectContent = generatePyprojectToml(
+      serverName,
+      python,
+      requiresPython
+    );
     await writeFile(pyprojectPath, newPyprojectContent, "utf8");
     logger.debug("Updated pyproject.toml with new versions");
 
