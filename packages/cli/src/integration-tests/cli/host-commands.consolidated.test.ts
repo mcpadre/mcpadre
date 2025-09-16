@@ -106,6 +106,8 @@ hosts:
           // Use claude-code as it works in both user and project modes
           const result = await spawn(
             [
+              "--format",
+              "nice",
               "host",
               "add",
               "claude-code",
@@ -141,7 +143,14 @@ hosts:
         withProcess(async spawn => {
           // First add the host to ensure it exists (for project mode)
           await spawn(
-            ["host", "add", "cursor", ...(mode === "user" ? ["--user"] : [])],
+            [
+              "--format",
+              "nice",
+              "host",
+              "add",
+              "cursor",
+              ...(mode === "user" ? ["--user"] : []),
+            ],
             {
               cwd: modeContext.getConfigDir(),
               buffer: true,
@@ -151,7 +160,14 @@ hosts:
 
           // Then try to add it again
           const result = await spawn(
-            ["host", "add", "cursor", ...(mode === "user" ? ["--user"] : [])],
+            [
+              "--format",
+              "nice",
+              "host",
+              "add",
+              "cursor",
+              ...(mode === "user" ? ["--user"] : []),
+            ],
             {
               cwd: modeContext.getConfigDir(),
               buffer: true,
@@ -183,6 +199,8 @@ hosts:
         withProcess(async spawn => {
           const result = await spawn(
             [
+              "--format",
+              "nice",
               "host",
               "add",
               "invalid-host",
@@ -205,7 +223,14 @@ hosts:
         `should suggest similar host names for typos in ${mode} mode`,
         withProcess(async spawn => {
           const result = await spawn(
-            ["host", "add", "cursur", ...(mode === "user" ? ["--user"] : [])],
+            [
+              "--format",
+              "nice",
+              "host",
+              "add",
+              "cursur",
+              ...(mode === "user" ? ["--user"] : []),
+            ],
             {
               cwd: modeContext.getConfigDir(),
               buffer: true,
