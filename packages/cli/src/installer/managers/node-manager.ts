@@ -2,6 +2,7 @@
 
 import { mkdir, readFile, stat, unlink, writeFile } from "fs/promises";
 import { join } from "path";
+import which from "which";
 
 import { createCommand } from "../../utils/command/index.js";
 import { NodePackageError } from "../../utils/errors.js";
@@ -9,6 +10,7 @@ import { addToServerGitignore } from "../gitignore-manager.js";
 
 import {
   determineNodeUpgrade,
+  determineReshimAction,
   generatePackageJson,
   generateVersionFiles,
   parsePackageJson,
@@ -16,6 +18,7 @@ import {
 
 import type { WorkspaceContext } from "../../config/types/index.js";
 import type { NodeOptionsV1 } from "../../config/types/v1/server/index.js";
+import type { NodeReshimManager } from "./node-manager-logic.js";
 import type { Logger } from "pino";
 
 /**
@@ -62,7 +65,7 @@ export class NodeManager {
   private createPnpmCommand(
     args: string[],
     serverDir: string,
-    logger: Logger
+    logger: Logger,
   ): { output(): Promise<string> } {
     // Try pnpm first
     const pnpmCmd = createCommand("pnpm", logger)
@@ -106,7 +109,7 @@ export class NodeManager {
         version: node.version,
         nodeVersion: node.nodeVersion,
       },
-      "Installing Node.js MCP server"
+      "Installing Node.js MCP server",
     );
 
     try {
@@ -130,7 +133,7 @@ export class NodeManager {
           await this.manageNodeVersionFile(serverDir, node.nodeVersion, logger);
         }
         // Check system prerequisites before attempting install
-        await this.checkSystemPrerequisites(serverDir, logger);
+        await this.checkSystemPrerequisites(serverDir, options.context, logger);
       }
 
       // Handle dependency management
@@ -148,7 +151,7 @@ export class NodeManager {
         (dependencyResult.dependenciesInstalled ||
           dependencyResult.environmentSynced)
       ) {
-        await this.checkSystemPrerequisites(serverDir, logger);
+        await this.checkSystemPrerequisites(serverDir, options.context, logger);
       }
 
       // Add server-specific gitignore patterns for Node.js files
@@ -157,12 +160,12 @@ export class NodeManager {
         await addToServerGitignore(serverDir, nodePatterns);
         logger.debug(
           { patterns: nodePatterns },
-          "Added Node.js gitignore patterns"
+          "Added Node.js gitignore patterns",
         );
       } catch (error) {
         logger.warn(
           { error },
-          "Failed to update server .gitignore for Node.js"
+          "Failed to update server .gitignore for Node.js",
         );
       }
 
@@ -187,7 +190,7 @@ export class NodeManager {
   private async manageNodeVersionFile(
     serverDir: string,
     nodeVersion: string,
-    logger: Logger
+    logger: Logger,
   ): Promise<void> {
     const nodeVersionPath = join(serverDir, ".node-version");
     const toolVersionsPath = join(serverDir, ".tool-versions");
@@ -200,18 +203,18 @@ export class NodeManager {
       await writeFile(nodeVersionPath, versionFiles.nodeVersion, "utf8");
       logger.debug(
         { nodeVersion, path: nodeVersionPath },
-        "Written .node-version file"
+        "Written .node-version file",
       );
 
       // Write .tool-versions for asdf compatibility
       await writeFile(toolVersionsPath, versionFiles.toolVersions, "utf8");
       logger.debug(
         { nodeVersion, path: toolVersionsPath },
-        "Written .tool-versions file"
+        "Written .tool-versions file",
       );
     } catch (error) {
       throw new NodePackageError(
-        `Failed to write Node.js version files: ${error}`
+        `Failed to write Node.js version files: ${error}`,
       );
     }
   }
@@ -222,7 +225,8 @@ export class NodeManager {
    */
   private async checkSystemPrerequisites(
     serverDir: string,
-    logger: Logger
+    context: WorkspaceContext,
+    logger: Logger,
   ): Promise<void> {
     // Check node --version in server directory
     try {
@@ -235,7 +239,7 @@ export class NodeManager {
       logger.debug({ nodeVersion }, "Node.js version check successful");
     } catch (error) {
       throw new Error(
-        `Node.js is not available or not working. Make sure Node.js is installed and accessible via PATH, or use a tool like mise/asdf to manage Node.js versions. Error: ${error}`
+        `Node.js is not available or not working. Make sure Node.js is installed and accessible via PATH, or use a tool like mise/asdf to manage Node.js versions. Error: ${error}`,
       );
     }
 
@@ -259,6 +263,42 @@ export class NodeManager {
         await npmInstallCmd.output();
         logger.info("Successfully installed pnpm via npm");
 
+        // After successful install, run reshim if needed
+        const managerConfig =
+          context.mergedConfig.options?.nodeVersionManager ?? "auto";
+
+        const whichPath = await which("node").catch(() => null);
+        const action = determineReshimAction(managerConfig, whichPath);
+
+        const runReshim = async (manager: NodeReshimManager): Promise<void> => {
+          const command = manager;
+          const args = ["reshim", "nodejs"];
+          logger.debug(`Running ${command} ${args.join(" ")}...`);
+          const reshimCmd = createCommand(command, logger).addArgs(args);
+          try {
+            await reshimCmd.output();
+            logger.debug(`Successfully ran ${command} reshim.`);
+          } catch (reshimError) {
+            logger.warn(
+              `Failed to run ${command} reshim. You may need to run it manually.`,
+            );
+            logger.debug(
+              { error: reshimError },
+              `Error running ${command} reshim`,
+            );
+          }
+        };
+
+        switch (action) {
+          case "asdf":
+          case "mise":
+            await runReshim(action);
+            break;
+          case "none":
+            // No action needed
+            break;
+        }
+
         // Verify pnpm is available
         try {
           const pnpmVerifyCmd = createCommand("pnpm", logger)
@@ -268,16 +308,16 @@ export class NodeManager {
           const pnpmVersion = await pnpmVerifyCmd.output();
           logger.debug(
             { pnpmVersion: pnpmVersion.trim() },
-            "pnpm installation verified"
+            "pnpm installation verified",
           );
         } catch (verifyError) {
           throw new Error(
-            `pnpm installation succeeded but verification failed: ${verifyError}`
+            `pnpm installation succeeded but verification failed: ${verifyError}`,
           );
         }
       } catch (npmError) {
         throw new Error(
-          `Failed to install pnpm via npm. Please ensure Node.js and npm are working. Original pnpm error: ${error}. npm installation error: ${npmError}`
+          `Failed to install pnpm via npm. Please ensure Node.js and npm are working. Original pnpm error: ${error}. npm installation error: ${npmError}`,
         );
       }
     }
@@ -332,7 +372,7 @@ export class NodeManager {
           node,
           serverDir,
           upgradeDecision.changes,
-          logger
+          logger,
         );
       case "SYNC":
         return await this.syncEnvironment(node, serverDir, logger);
@@ -354,7 +394,7 @@ export class NodeManager {
   private async createNewProject(
     node: NodeOptionsV1,
     serverDir: string,
-    logger: Logger
+    logger: Logger,
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -380,7 +420,7 @@ export class NodeManager {
     const installCmd = this.createPnpmCommand(
       ["install", "--ignore-workspace"],
       serverDir,
-      logger
+      logger,
     );
     await installCmd.output();
     logger.info("Created pnpm-lock.yaml file");
@@ -399,7 +439,7 @@ export class NodeManager {
   private async syncEnvironment(
     node: NodeOptionsV1,
     serverDir: string,
-    logger: Logger
+    logger: Logger,
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -414,7 +454,7 @@ export class NodeManager {
     const syncCmd = this.createPnpmCommand(
       ["install", "--ignore-workspace"],
       serverDir,
-      logger
+      logger,
     );
     await syncCmd.output();
     logger.debug("Synchronized environment with pnpm install");
@@ -434,7 +474,7 @@ export class NodeManager {
     node: NodeOptionsV1,
     serverDir: string,
     changes: string[],
-    logger: Logger
+    logger: Logger,
   ): Promise<{
     dependenciesInstalled: boolean;
     environmentSynced: boolean;
@@ -446,7 +486,7 @@ export class NodeManager {
 
     logger.warn(
       { changes },
-      "Upgrading Node.js project due to version changes"
+      "Upgrading Node.js project due to version changes",
     );
 
     // Write Node.js version file first (needed for asdf/mise before any node commands)
@@ -472,7 +512,7 @@ export class NodeManager {
     const installCmd = this.createPnpmCommand(
       ["install", "--ignore-workspace"],
       serverDir,
-      logger
+      logger,
     );
     await installCmd.output();
     logger.info("Regenerated pnpm-lock.yaml with new versions");

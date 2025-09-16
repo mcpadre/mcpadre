@@ -24,9 +24,48 @@ export type WorkspaceAndVersionedServerSharedOptionsV1 = Static<
   typeof WorkspaceAndVersionedServerSharedOptionsV1
 >;
 
+
+// Define the union type for Python version managers
+export const PythonVersionManagerV1 = Type.Union(
+  [
+    Type.Literal("auto"),
+    Type.Literal("none"),
+    Type.Literal("asdf"),
+    Type.Literal("mise"),
+  ],
+  {
+    description:
+      "The Python version manager to use. 'auto' (default) detects asdf/mise, 'none' disables, or specify one.",
+    default: "auto",
+  },
+);
+export type PythonVersionManagerV1 = Static<typeof PythonVersionManagerV1>;
+
+// Define the union type for Node version managers
+// Although it's the same as Python for now, we keep it separate
+// to allow for future additions like 'nvm'.
+export const NodeVersionManagerV1 = Type.Union(
+  [
+    Type.Literal("auto"),
+    Type.Literal("none"),
+    Type.Literal("asdf"),
+    Type.Literal("mise"),
+  ],
+  {
+    description:
+      "The Node.js version manager to use. 'auto' (default) detects asdf/mise, 'none' disables, or specify one.",
+    default: "auto",
+  },
+);
+export type NodeVersionManagerV1 = Static<typeof NodeVersionManagerV1>;
+
 export const BaseOptionsV1 = Type.Composite([
   WorkspaceAndServerSharedOptionsV1,
   WorkspaceAndStdioServerSharedOptionsV1,
+  Type.Object({
+    pythonVersionManager: Type.Optional(PythonVersionManagerV1),
+    nodeVersionManager: Type.Optional(NodeVersionManagerV1),
+  }),
 ]);
 export type BaseOptionsV1 = Static<typeof BaseOptionsV1>;
 
