@@ -80,6 +80,7 @@
     "shlex": "3.0.0",
     "tempfile": "5.0.0",
     "tree-kill": "1.2.2",
+    "type-fest": "^5.0.0",
     "which": "5.0.0",
     "yaml": "2.8.1"
   },
