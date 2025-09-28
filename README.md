@@ -24,7 +24,7 @@ You'll need NodeJS (we test against 22.x and follow NodeJS's support calendar; b
 
 ### Windows support?
 
-`mcpadre` may work out-of-the-box on Windows; it does have Powershell command paths. However, I don't use Windows for development purposes unless I'm using WSL2 and I just haven't mustered the urge to go set up a Windows machine as necessary to test this in depth. Windows support is a great place for contributions.
+`mcpadre` may work out-of-the-box on Windows; it does have Powershell command paths. However, I don't use Windows for development purposes unless I'm using WSL2 and I just haven't mustered the urge to go set up a Windows machine as necessary to test this. Windows support is a great place for contributions, particularly around testing.
 
 ### How does sandboxing work?
 
@@ -36,4 +36,4 @@ You'll need NodeJS (we test against 22.x and follow NodeJS's support calendar; b
 
 ### How's it pronounced?
 
-M-C-Padre. McPadre is legal only within the city limits of Boston during the evening hours of the 17th of March. Sorry, I don't make the rules, except when I do.
+Model Control Padre. M-C-Padre if you're terse. McPadre is legal only within the city limits of Boston during the evening hours of the 17th of March. Sorry, I don't make the rules, except when I do.
