@@ -347,8 +347,8 @@ describe("Project vs User Mode Isolation", () => {
           mcpServers: {
             "user-server": {
               node: {
-                package: "@modelcontextprotocol/server-filesystem",
-                version: "2025.8.21",
+                package: "@wonderwhy-er/desktop-commander",
+                version: "0.2.9",
               },
             },
           },
@@ -364,8 +364,8 @@ describe("Project vs User Mode Isolation", () => {
           mcpServers: {
             "project-server": {
               node: {
-                package: "@modelcontextprotocol/server-memory",
-                version: "2025.8.4",
+                package: "@wonderwhy-er/desktop-commander",
+                version: "0.2.9",
               },
             },
           },
@@ -383,7 +383,8 @@ describe("Project vs User Mode Isolation", () => {
           tempProjectDir,
           ["outdated", "--user"]
         );
-        expect(userListResult.exitCode).toBe(0);
+        // Expect exit code 1 since version 0.2.9 is intentionally outdated
+        expect(userListResult.exitCode).toBe(1);
         expect(userListResult.stdout).toContain("user-server");
         expect(userListResult.stdout).not.toContain("project-server");
 
@@ -392,7 +393,8 @@ describe("Project vs User Mode Isolation", () => {
           cwd: tempProjectDir,
           buffer: true,
         });
-        expect(projectListResult.exitCode).toBe(0);
+        // Expect exit code 1 since version 0.2.9 is intentionally outdated
+        expect(projectListResult.exitCode).toBe(1);
         expect(projectListResult.stdout).toContain("project-server");
         expect(projectListResult.stdout).not.toContain("user-server");
       })
@@ -655,8 +657,8 @@ describe("Project vs User Mode Isolation", () => {
           mcpServers: {
             "mode-switch-server": {
               node: {
-                package: "@modelcontextprotocol/server-filesystem",
-                version: "2025.8.21",
+                package: "@wonderwhy-er/desktop-commander",
+                version: "0.2.9",
               },
             },
           },
@@ -669,8 +671,8 @@ describe("Project vs User Mode Isolation", () => {
           mcpServers: {
             "mode-switch-server": {
               node: {
-                package: "@modelcontextprotocol/server-memory",
-                version: "2025.8.4",
+                package: "@wonderwhy-er/desktop-commander",
+                version: "0.2.9",
               },
             },
           },
@@ -706,13 +708,15 @@ describe("Project vs User Mode Isolation", () => {
           tempProjectDir,
           ["outdated", "--user"]
         );
-        expect(userOutdated.exitCode).toBe(0);
+        // Expect exit code 1 since version 0.2.9 is intentionally outdated
+        expect(userOutdated.exitCode).toBe(1);
 
         const projectOutdated = await spawn(["outdated"], {
           cwd: tempProjectDir,
           buffer: true,
         });
-        expect(projectOutdated.exitCode).toBe(0);
+        // Expect exit code 1 since version 0.2.9 is intentionally outdated
+        expect(projectOutdated.exitCode).toBe(1);
 
         // Both should find the server, but they should be separate installations
         expect(userOutdated.stdout).toContain("mode-switch-server");

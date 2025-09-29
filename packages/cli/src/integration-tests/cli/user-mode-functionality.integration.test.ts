@@ -501,8 +501,8 @@ describe("User Mode Integration Tests", () => {
             },
             "test-server-two": {
               node: {
-                package: "@modelcontextprotocol/server-everything",
-                version: "2025.8.18",
+                package: "@wonderwhy-er/desktop-commander",
+                version: "0.2.9",
               },
             },
           },

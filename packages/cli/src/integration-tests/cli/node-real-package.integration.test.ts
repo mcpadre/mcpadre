@@ -26,7 +26,7 @@ describe("Node.js server with real MCP package", () => {
         "memory-server": {
           node: {
             package: "@modelcontextprotocol/server-memory",
-            version: "2025.8.4", // Use a specific version for reproducibility
+            version: "0.6.0", // Use a known existing version for reproducibility
             nodeVersion: "20.10.0",
           },
           env: {
@@ -86,7 +86,7 @@ describe("Node.js server with real MCP package", () => {
       expect(packageJson.engines.node).toBe(">=20.10.0");
       expect(
         packageJson.dependencies["@modelcontextprotocol/server-memory"]
-      ).toBe("2025.8.4");
+      ).toBe("0.6.0");
 
       // Verify version files were created
       const nodeVersionPath = join(serverDir, ".node-version");
@@ -261,7 +261,7 @@ describe("Node.js server with real MCP package", () => {
           "test-server": {
             node: {
               package: "@modelcontextprotocol/server-memory",
-              version: "2025.8.4",
+              version: "0.6.0",
               // No nodeVersion to test without version constraints
             },
           },
@@ -304,7 +304,7 @@ describe("Node.js server with real MCP package", () => {
 
         expect(
           packageJson.dependencies["@modelcontextprotocol/server-memory"]
-        ).toBe("2025.8.4");
+        ).toBe("0.6.0");
       } finally {
         await testProject.cleanup();
       }
