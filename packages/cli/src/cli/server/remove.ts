@@ -62,7 +62,7 @@ export function makeServerRemoveCommand() {
       withConfigContextAndErrorHandling(
         async (
           context: WorkspaceContext,
-          config: WorkspaceContext["mergedConfig"],
+          _config: WorkspaceContext["mergedConfig"],
           serverName: string,
           options: {
             yes?: boolean;
@@ -71,7 +71,13 @@ export function makeServerRemoveCommand() {
           const { yes = false } = options;
 
           // Check if server exists in config
-          if (!serverExistsInConfig(config, serverName)) {
+          // Use original config from context, not merged config
+          const originalConfig =
+            context.workspaceType === "user"
+              ? (context as UserWorkspaceContext).userConfig
+              : (context as ProjectWorkspaceContext).projectConfig;
+
+          if (!serverExistsInConfig(originalConfig, serverName)) {
             CLI_LOGGER.error(
               `Server '${serverName}' not found in configuration`
             );
@@ -110,7 +116,11 @@ export function makeServerRemoveCommand() {
           }
 
           // Remove server from config
-          const updatedConfig = removeServerFromConfig(config, serverName);
+          // Use original config from context, not merged config
+          const updatedConfig = removeServerFromConfig(
+            originalConfig,
+            serverName
+          );
 
           // Write updated config back to file
           const configPath =

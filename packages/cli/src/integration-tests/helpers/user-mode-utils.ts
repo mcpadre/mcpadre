@@ -252,6 +252,7 @@ export async function runUserModeCommand(
   options: {
     buffer?: boolean;
     env?: Record<string, string | undefined>;
+    preserveHome?: boolean;
   } = {}
 ): Promise<{
   exitCode: number;
@@ -271,7 +272,8 @@ export async function runUserModeCommand(
       ...options.env,
       // Override Claude Code's user-level config to use test directory
       MCPADRE_CLAUDE_CODE_USER_FILE_PATH: join(fakeHomeDir, ".claude.json"),
-      HOME: fakeHomeDir,
+      // Only override HOME if preserveHome is not set (default isolation behavior)
+      ...(options.preserveHome ? {} : { HOME: fakeHomeDir }),
     },
   });
 

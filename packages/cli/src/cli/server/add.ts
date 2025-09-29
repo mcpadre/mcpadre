@@ -197,10 +197,16 @@ Examples:
               }
 
               // Add the server to the configuration
+              // Use original config from context, not merged config
+              const originalConfig =
+                context.workspaceType === "user"
+                  ? (context as UserWorkspaceContext).userConfig
+                  : (context as ProjectWorkspaceContext).projectConfig;
+
               const updatedConfig = {
-                ...config,
+                ...originalConfig,
                 mcpServers: {
-                  ...config.mcpServers,
+                  ...originalConfig.mcpServers,
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   [flowResult.serverName]: flowResult.serverConfig as any,
                 },
@@ -371,8 +377,14 @@ Examples:
             );
 
             // Add servers to config
+            // Use original config from context, not merged config
+            const originalConfig =
+              context.workspaceType === "user"
+                ? (context as UserWorkspaceContext).userConfig
+                : (context as ProjectWorkspaceContext).projectConfig;
+
             const updatedConfig = addServersToConfig(
-              config,
+              originalConfig,
               serverSpec,
               selectedServerNames
             );

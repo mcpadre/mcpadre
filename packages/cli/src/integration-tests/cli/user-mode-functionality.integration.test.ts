@@ -8,7 +8,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type SpawnFunction, withProcess } from "../helpers/spawn-cli-v2.js";
 import {
   cleanupTestEnvironment,
-  createConfigWithServers,
   createMockServerInstallation,
   createTempProjectDir,
   createTempUserDir,
@@ -298,8 +297,21 @@ describe("User Mode Integration Tests", () => {
     it(
       "should find orphaned directories in user mode",
       withProcess(async (spawn: SpawnFunction) => {
-        // Create config with only some servers
-        const partialConfig = createConfigWithServers(["current-server"]);
+        // Create config with only some servers (using node servers to avoid Docker dependency)
+        const partialConfig = {
+          version: 1 as const,
+          mcpServers: {
+            "current-server": {
+              node: {
+                package: "@modelcontextprotocol/server-filesystem",
+                version: "0.6.0",
+              },
+            },
+          },
+          hosts: {
+            "claude-code": true,
+          },
+        };
         await createUserConfig(tempUserDir, partialConfig);
 
         // Create server directories (some will be orphaned)
@@ -312,7 +324,8 @@ describe("User Mode Integration Tests", () => {
           spawn,
           tempUserDir,
           tempProjectDir,
-          ["install", "--user"]
+          ["install", "--user"],
+          { preserveHome: true }
         );
 
         expect(result.exitCode).toBe(0);
@@ -332,8 +345,21 @@ describe("User Mode Integration Tests", () => {
     it(
       "should not report project mode orphans when in user mode",
       withProcess(async (spawn: SpawnFunction) => {
-        // Create user config
-        const userConfig = createConfigWithServers(["user-server"]);
+        // Create user config (using node server to avoid Docker dependency)
+        const userConfig = {
+          version: 1 as const,
+          mcpServers: {
+            "user-server": {
+              node: {
+                package: "@modelcontextprotocol/server-filesystem",
+                version: "0.6.0",
+              },
+            },
+          },
+          hosts: {
+            "claude-code": true,
+          },
+        };
         await createUserConfig(tempUserDir, userConfig);
 
         // Create orphaned servers in BOTH locations
@@ -345,7 +371,8 @@ describe("User Mode Integration Tests", () => {
           spawn,
           tempUserDir,
           tempProjectDir,
-          ["install", "--user"]
+          ["install", "--user"],
+          { preserveHome: true }
         );
 
         expect(result.exitCode).toBe(0);
@@ -501,8 +528,8 @@ describe("User Mode Integration Tests", () => {
             },
             "test-server-two": {
               node: {
-                package: "@modelcontextprotocol/server-everything",
-                version: "2025.8.18",
+                package: "@wonderwhy-er/desktop-commander",
+                version: "0.2.9",
               },
             },
           },
