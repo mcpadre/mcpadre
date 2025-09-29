@@ -63,7 +63,7 @@ Examples:
       withConfigContextAndErrorHandling(
         async (
           context: WorkspaceContext,
-          config: WorkspaceContext["mergedConfig"],
+          _config: WorkspaceContext["mergedConfig"],
           hostName: string
         ) => {
           // Validate host name
@@ -143,8 +143,8 @@ Examples:
               ? (context as UserWorkspaceContext).userConfig
               : (context as ProjectWorkspaceContext).projectConfig;
 
-          // Check if already enabled (use merged config for checking)
-          if (isHostEnabled(config, hostName)) {
+          // Check if already enabled (use target config for checking)
+          if (isHostEnabled(targetConfig, hostName)) {
             CLI_LOGGER.info(
               `Host '${hostName}' is already enabled in ${context.workspaceType} configuration`
             );

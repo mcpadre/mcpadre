@@ -6,6 +6,7 @@ import { readFile, writeFile } from "fs/promises";
 import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { createTempProject } from "../../test-utils/project/temp-project.js";
 import {
@@ -170,6 +171,22 @@ describe("mcpadre Init Command Integration (Consolidated)", () => {
 
           expect(configContent).toContain("version: 1");
           expect(configContent).toContain(`${validHost}: true`);
+
+          // CRITICAL: Verify no merge metadata is written to disk
+          const parsedConfig = parseYaml(configContent);
+          expect(parsedConfig).not.toHaveProperty("hasUserConfig");
+          expect(parsedConfig).not.toHaveProperty("userConfig");
+
+          // Verify config contains only expected clean structure
+          expect(parsedConfig).toHaveProperty("version", 1);
+          expect(parsedConfig).toHaveProperty("env");
+          expect(parsedConfig).toHaveProperty("mcpServers");
+          expect(parsedConfig).toHaveProperty("hosts");
+
+          // Verify no unexpected extra properties from merging
+          const expectedKeys = ["version", "env", "mcpServers", "hosts"];
+          const actualKeys = Object.keys(parsedConfig);
+          expect(actualKeys.sort()).toEqual(expectedKeys.sort());
         })
       );
 

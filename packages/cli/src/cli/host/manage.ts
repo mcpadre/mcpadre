@@ -25,10 +25,12 @@ import type {
 /**
  * Unified logic for host manage functionality using workspace context
  */
-async function hostManageLogic(
-  context: WorkspaceContext,
-  config: SettingsProject | SettingsUser
-): Promise<void> {
+async function hostManageLogic(context: WorkspaceContext): Promise<void> {
+  // Use original config from context, not merged config
+  const config =
+    context.workspaceType === "user"
+      ? (context as UserWorkspaceContext).userConfig
+      : (context as ProjectWorkspaceContext).projectConfig;
   try {
     CLI_LOGGER.info("Starting interactive host management...");
 
