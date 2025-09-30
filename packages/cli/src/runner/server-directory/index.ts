@@ -13,31 +13,31 @@ import type { WorkspaceContext } from "../../config/types/index.js";
 /**
  * Creates the server directory structure for a given server
  * Directory structure:
- * - Both modes: {workspace}/.mcpadre/servers/{server-name}/logs/
+ * - Both modes: {workspace}/.mcpadre/traffic/{server-name}/
  *
  * @param context Workspace context containing the workspace directory
  * @param serverName Name of the MCP server
- * @returns Promise resolving to the logs directory path
+ * @returns Promise resolving to the traffic recording directory path
  */
 export async function createServerDirectory(
   context: WorkspaceContext,
   serverName: string
 ): Promise<string> {
-  const logsDir = getMcpTrafficRecordingPath(context, serverName);
+  const recordingDir = getMcpTrafficRecordingPath(context, serverName);
 
   // Create the directory structure recursively
-  await mkdir(logsDir, { recursive: true });
+  await mkdir(recordingDir, { recursive: true });
 
-  return logsDir;
+  return recordingDir;
 }
 
 /**
- * Creates a log file path for MCP traffic logging
+ * Creates a recording file path for MCP traffic recording
  * Format: {server-name}__{ISO-UTC-timestamp}.jsonl
  *
  * @param serverName Name of the MCP server
- * @param logsDir Directory where logs should be stored
- * @returns Full path to the log file
+ * @param recordingDir Directory where recordings should be stored
+ * @returns Full path to the recording file
  */
 export function createRecordingFilePath(
   serverName: string,
@@ -63,11 +63,11 @@ export function getServerDirectoryPath(
 }
 
 /**
- * Gets the logs directory path (without creating it)
+ * Gets the traffic recording directory path (without creating it)
  *
  * @param context Workspace context containing the workspace directory
  * @param serverName Name of the MCP server
- * @returns Logs directory path
+ * @returns Traffic recording directory path
  */
 export function getTrafficRecordingDirectoryPath(
   context: WorkspaceContext,

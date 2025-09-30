@@ -16,24 +16,24 @@ import {
 import type { CommandStringTemplate } from "../../config/types/v1/server/index.js";
 import type { TempProject } from "../../test-utils/project/temp-project.js";
 
-describe("MCP Traffic Logging Integration", () => {
+describe("MCP Traffic Recording Integration", () => {
   let tempProject: TempProject;
 
   beforeEach(async () => {
-    // Create temporary project with shell server configured for logging
+    // Create temporary project with shell server configured for recording
     const config = {
       version: 1,
       mcpServers: {
-        // Server with logging enabled at server level
-        "test-server-logging-enabled": {
+        // Server with recording enabled at server level
+        "test-server-recording-enabled": {
           shell: {
             command:
               `node ${join(process.cwd(), "dist", "test-utils", "mcp", "echo-server.js")}` as CommandStringTemplate,
           },
           logMcpTraffic: true,
         },
-        // Server with logging disabled at server level, workspace enabled
-        "test-server-logging-disabled": {
+        // Server with recording disabled at server level, workspace enabled
+        "test-server-recording-disabled": {
           shell: {
             command:
               `node ${join(process.cwd(), "dist", "test-utils", "mcp", "echo-server.js")}` as CommandStringTemplate,
@@ -42,7 +42,7 @@ describe("MCP Traffic Logging Integration", () => {
         },
       },
       options: {
-        logMcpTraffic: true, // Workspace-level logging enabled
+        logMcpTraffic: true, // Workspace-level recording enabled
       },
     } as const;
 
@@ -59,10 +59,10 @@ describe("MCP Traffic Logging Integration", () => {
 
   describe("server directory and log file creation", () => {
     it(
-      "should create server directory and log file when logging is enabled",
+      "should create server directory and log file when recording is enabled",
       withProcess(async spawn => {
         // Start the CLI process
-        const proc = spawn(["run", "test-server-logging-enabled"], {
+        const proc = spawn(["run", "test-server-recording-enabled"], {
           cwd: tempProject.path,
           buffer: false, // Enable streaming for long-running process
         });
@@ -70,7 +70,7 @@ describe("MCP Traffic Logging Integration", () => {
         // Wait for connection message
         await waitForPattern(
           proc,
-          "Connected to shell server test-server-logging-enabled",
+          "Connected to shell server test-server-recording-enabled",
           5000
         );
 
@@ -98,7 +98,7 @@ describe("MCP Traffic Logging Integration", () => {
           tempProject.path,
           ".mcpadre",
           "traffic",
-          "test-server-logging-enabled"
+          "test-server-recording-enabled"
         );
 
         expect(existsSync(recordingDir)).toBe(true);
@@ -110,18 +110,18 @@ describe("MCP Traffic Logging Integration", () => {
         const recordingFile = recordingFiles[0];
         // Verify filename format: server-name__YYYY-MM-DDTHH:mm:ss.sssZ.jsonl
         expect(recordingFile).toMatch(
-          /^test-server-logging-enabled__\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\.jsonl$/
+          /^test-server-recording-enabled__\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\.jsonl$/
         );
       })
     );
   });
 
-  describe("logging disabled behavior", () => {
+  describe("recording disabled behavior", () => {
     it(
-      "should NOT create MCP traffic log files when logging is disabled",
+      "should NOT create MCP traffic log files when recording is disabled",
       withProcess(async spawn => {
-        // Start the CLI process with logging disabled
-        const proc = spawn(["run", "test-server-logging-disabled"], {
+        // Start the CLI process with recording disabled
+        const proc = spawn(["run", "test-server-recording-disabled"], {
           cwd: tempProject.path,
           buffer: false,
         });
@@ -129,7 +129,7 @@ describe("MCP Traffic Logging Integration", () => {
         // Wait for connection message
         await waitForPattern(
           proc,
-          "Connected to shell server test-server-logging-disabled",
+          "Connected to shell server test-server-recording-disabled",
           5000
         );
 
@@ -165,11 +165,11 @@ describe("MCP Traffic Logging Integration", () => {
           tempProject.path,
           ".mcpadre",
           "servers",
-          "test-server-logging-disabled",
+          "test-server-recording-disabled",
           "logs"
         );
 
-        // The logs directory itself should NOT exist when logging is disabled
+        // The logs directory itself should NOT exist when recording is disabled
         expect(existsSync(logsDir)).toBe(false);
       })
     );
@@ -180,7 +180,7 @@ describe("MCP Traffic Logging Integration", () => {
       "should log in correct JSONL format when enabled",
       withProcess(async spawn => {
         // Start the CLI process
-        const proc = spawn(["run", "test-server-logging-enabled"], {
+        const proc = spawn(["run", "test-server-recording-enabled"], {
           cwd: tempProject.path,
           buffer: false,
         });
@@ -188,7 +188,7 @@ describe("MCP Traffic Logging Integration", () => {
         // Wait for connection message
         await waitForPattern(
           proc,
-          "Connected to shell server test-server-logging-enabled",
+          "Connected to shell server test-server-recording-enabled",
           5000
         );
 
@@ -227,7 +227,7 @@ describe("MCP Traffic Logging Integration", () => {
           tempProject.path,
           ".mcpadre",
           "traffic",
-          "test-server-logging-enabled"
+          "test-server-recording-enabled"
         );
         expect(existsSync(recordingDir)).toBe(true);
 

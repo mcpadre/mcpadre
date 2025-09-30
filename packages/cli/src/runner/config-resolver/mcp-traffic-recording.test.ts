@@ -43,35 +43,35 @@ describe("MCP Traffic Configuration Resolution", () => {
   });
 
   describe("shouldLogMcpTraffic", () => {
-    it("should return false when neither workspace nor server config enables logging", () => {
+    it("should return false when neither workspace nor server config enables recording", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig();
 
       expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
     });
 
-    it("should return true when workspace config enables logging", () => {
+    it("should return true when workspace config enables recording", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig(true);
 
       expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(true);
     });
 
-    it("should return false when workspace config explicitly disables logging", () => {
+    it("should return false when workspace config explicitly disables recording", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig(false);
 
       expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
     });
 
-    it("should return true when server config enables logging", () => {
+    it("should return true when server config enables recording", () => {
       const serverConfig = createShellServerConfig(true);
       const workspaceConfig = createWorkspaceConfig(false);
 
       expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(true);
     });
 
-    it("should return false when server config explicitly disables logging", () => {
+    it("should return false when server config explicitly disables recording", () => {
       const serverConfig = createShellServerConfig(false);
       const workspaceConfig = createWorkspaceConfig(true);
 
@@ -120,7 +120,7 @@ describe("MCP Traffic Configuration Resolution", () => {
     });
   });
 
-  describe("supportsTrafficLogging", () => {
+  describe("supportsTrafficRecording", () => {
     it("should return true for stdio/shell servers", () => {
       const shellServerConfig = createShellServerConfig();
       expect(supportsTrafficRecording(shellServerConfig)).toBe(true);
@@ -132,8 +132,8 @@ describe("MCP Traffic Configuration Resolution", () => {
     });
   });
 
-  describe("getLoggingConfig", () => {
-    it("should return server source when server config sets logging", () => {
+  describe("getRecordingConfig", () => {
+    it("should return server source when server config sets recording", () => {
       const serverConfig = createShellServerConfig(true);
       const workspaceConfig = createWorkspaceConfig(false);
 
@@ -145,7 +145,7 @@ describe("MCP Traffic Configuration Resolution", () => {
       });
     });
 
-    it("should return workspace source when only workspace config sets logging", () => {
+    it("should return workspace source when only workspace config sets recording", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig(true);
 
@@ -157,7 +157,7 @@ describe("MCP Traffic Configuration Resolution", () => {
       });
     });
 
-    it("should return default source when no config sets logging", () => {
+    it("should return default source when no config sets recording", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig();
 

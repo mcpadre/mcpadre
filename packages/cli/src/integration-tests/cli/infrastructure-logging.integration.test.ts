@@ -140,10 +140,10 @@ describe("Infrastructure Logging Integration", () => {
 
   describe("log separation", () => {
     it(
-      "should keep infrastructure logs separate from MCP traffic logs",
+      "should keep infrastructure logs separate from MCP traffic recordings",
       withProcess(async spawn => {
-        // Create config with MCP traffic logging enabled
-        const configWithLogging = {
+        // Create config with MCP traffic recording enabled
+        const configWithRecording = {
           version: 1,
           mcpServers: {
             "test-both-logs": {
@@ -151,13 +151,13 @@ describe("Infrastructure Logging Integration", () => {
                 command:
                   `node ${join(process.cwd(), "dist", "test-utils", "mcp", "echo-server.js")}` as CommandStringTemplate,
               },
-              logMcpTraffic: true, // Enable MCP traffic logging
+              logMcpTraffic: true, // Enable MCP traffic recording
             },
           },
         } as const;
 
-        const projectWithLogging = await createTempProject({
-          config: configWithLogging,
+        const projectWithRecording = await createTempProject({
+          config: configWithRecording,
           format: "yaml",
           prefix: "both-logs-test-",
         });
@@ -166,7 +166,7 @@ describe("Infrastructure Logging Integration", () => {
           // Start the CLI process in non-TTY mode
           // The spawn helper always uses pipes, which simulates non-TTY
           const proc = spawn(["run", "test-both-logs"], {
-            cwd: projectWithLogging.path,
+            cwd: projectWithRecording.path,
             buffer: false,
           });
 
@@ -200,7 +200,7 @@ describe("Infrastructure Logging Integration", () => {
 
           // Verify infrastructure logs are in .mcpadre/logs/
           const infraLogsDir = join(
-            projectWithLogging.path,
+            projectWithRecording.path,
             ".mcpadre",
             "logs"
           );
@@ -212,7 +212,7 @@ describe("Infrastructure Logging Integration", () => {
 
           // Verify MCP traffic recordings are in .mcpadre/traffic/test-both-logs/
           const mcpRecordingDir = join(
-            projectWithLogging.path,
+            projectWithRecording.path,
             ".mcpadre",
             "traffic",
             "test-both-logs"
@@ -243,7 +243,7 @@ describe("Infrastructure Logging Integration", () => {
             expect("req" in entry || "res" in entry).toBe(true);
           }
         } finally {
-          await projectWithLogging.cleanup();
+          await projectWithRecording.cleanup();
         }
       })
     );

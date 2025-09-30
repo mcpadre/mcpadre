@@ -10,7 +10,7 @@ import type { SettingsProject } from "../../config/types/index.js";
 import type { McpServerV1 } from "../../config/types/v1/server/index.js";
 
 /**
- * Determines whether MCP traffic logging should be enabled for a specific server
+ * Determines whether MCP traffic recording should be enabled for a specific server
  *
  * Resolution order:
  * 1. Server-level logMcpTraffic setting (if present) takes precedence
@@ -19,7 +19,7 @@ import type { McpServerV1 } from "../../config/types/v1/server/index.js";
  *
  * @param serverConfig Configuration for the specific MCP server
  * @param workspaceConfig Workspace-level project configuration
- * @returns true if MCP traffic logging should be enabled, false otherwise
+ * @returns true if MCP traffic recording should be enabled, false otherwise
  */
 export function shouldRecordMcpTraffic(
   serverConfig: McpServerV1,
@@ -47,7 +47,7 @@ export function shouldRecordMcpTraffic(
 
 /**
  * Type guard to check if a server config supports logMcpTraffic option
- * Currently only shell servers support MCP traffic logging
+ * Currently only shell servers support MCP traffic recording
  *
  * @param serverConfig Server configuration to check
  * @returns true if the server supports logMcpTraffic option
@@ -58,11 +58,11 @@ export function supportsTrafficRecording(serverConfig: McpServerV1): boolean {
 }
 
 /**
- * Gets the effective logging setting for a server, with additional metadata
+ * Gets the effective recording setting for a server, with additional metadata
  *
  * @param serverConfig Configuration for the specific MCP server
  * @param workspaceConfig Workspace-level project configuration
- * @returns Object with logging enabled flag and source of the setting
+ * @returns Object with recording enabled flag and source of the setting
  */
 export function getRecordingConfig(
   serverConfig: McpServerV1,

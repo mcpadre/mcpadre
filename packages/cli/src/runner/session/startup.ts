@@ -28,7 +28,7 @@ export interface CreateSessionOptions {
 
 /**
  * Creates an InteractiveSessionManager with appropriate interceptors based on configuration.
- * Handles MCP traffic logging setup if enabled.
+ * Handles MCP traffic recording setup if enabled.
  */
 export async function createSessionWithInterceptors(
   options: CreateSessionOptions
@@ -42,29 +42,34 @@ export async function createSessionWithInterceptors(
     context,
   } = options;
 
-  // Check if MCP traffic logging should be enabled
-  const loggingEnabled = shouldRecordMcpTraffic(serverConfig, projectConfig);
-  let logFilePath: string | undefined;
+  // Check if MCP traffic recording should be enabled
+  const recordingEnabled = shouldRecordMcpTraffic(serverConfig, projectConfig);
+  let recordingFilePath: string | undefined;
 
-  if (loggingEnabled) {
-    logger.debug("MCP traffic logging enabled, setting up log file");
+  if (recordingEnabled) {
+    logger.debug("MCP traffic recording enabled, setting up recording file");
     try {
-      const logsDir = await createServerDirectory(context, serverName);
-      logFilePath = createRecordingFilePath(serverName, logsDir);
-      logger.debug({ logFilePath }, "Created log file path for MCP traffic");
+      const recordingDir = await createServerDirectory(context, serverName);
+      recordingFilePath = createRecordingFilePath(serverName, recordingDir);
+      logger.debug(
+        { recordingFilePath },
+        "Created recording file path for MCP traffic"
+      );
     } catch (error) {
       logger.warn(
         { error },
-        "Failed to create server directory for logging, continuing without logging"
+        "Failed to create server directory for recording, continuing without recording"
       );
     }
   }
 
-  // Set up interceptors array, with logging interceptor first if enabled
+  // Set up interceptors array, with recording interceptor first if enabled
   const interceptors = [];
-  if (logFilePath) {
-    interceptors.push(new McpTrafficRecorder(logFilePath));
-    logger.debug("Added MCP traffic logging interceptor as first interceptor");
+  if (recordingFilePath) {
+    interceptors.push(new McpTrafficRecorder(recordingFilePath));
+    logger.debug(
+      "Added MCP traffic recording interceptor as first interceptor"
+    );
   }
 
   return new InteractiveSessionManager(sessionConfig, interceptors);
