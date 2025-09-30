@@ -1,7 +1,7 @@
 // pattern: Functional Core
 
-import { shouldRecordMcpTraffic } from "../config-resolver/mcp-traffic-recording";
-import { McpTrafficRecorder } from "../pipeline/interceptors/mcp-traffic-recorder";
+import { shouldRecordMcpTraffic } from "../config-resolver/mcp-traffic-recording.js";
+import { McpTrafficRecorder } from "../pipeline/interceptors/mcp-traffic-recorder.js";
 import {
   createRecordingFilePath,
   createServerDirectory,

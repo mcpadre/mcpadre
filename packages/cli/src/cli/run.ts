@@ -47,6 +47,17 @@ export function makeRunCommand() {
             CLI_LOGGER
           );
 
+          // Debug stdin at entry point
+          runLogger.debug(
+            {
+              atEntry_stdinReadable: process.stdin.readable,
+              atEntry_stdinDestroyed: process.stdin.destroyed,
+              atEntry_stdinClosed: process.stdin.closed,
+              atEntry_isTTY: process.stdin.isTTY,
+            },
+            "stdin state at CLI entry"
+          );
+
           runLogger.info(`Starting ${configType} MCP server: ${serverName}`);
 
           // Run the MCP server with the appropriate logger
