@@ -349,7 +349,8 @@ describe("Workspace Unification", () => {
     const serverNameArbitrary = fc
       .string({ minLength: 1, maxLength: 50 })
       .filter(name => name.trim().length > 0)
-      .filter(name => !name.includes("/") && !name.includes("\\"));
+      .filter(name => !name.includes("/") && !name.includes("\\"))
+      .filter(name => name !== "." && name !== ".."); // Exclude path components that get normalized
 
     // Generator for workspace directories
     const workspaceDirArbitrary = fc.oneof(
