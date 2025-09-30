@@ -59,8 +59,12 @@ async function shouldSkipDockerTests(): Promise<boolean> {
   if (process.env["MCPADRE_SKIP_DOCKER_TESTS"] === "1") {
     return true;
   }
-  return !(await isDockerAvailable());
+  const available = await isDockerAvailable();
+  return !available;
 }
+
+// Evaluate Docker availability at module load time for skipIf conditions
+const SKIP_DOCKER_TESTS = await shouldSkipDockerTests();
 
 // Simple mock logger for testing
 const mockLogger = {
@@ -110,7 +114,7 @@ describe("Container Server Integration", () => {
   });
 
   describe("Container Image Management", () => {
-    test.skipIf(shouldSkipDockerTests)(
+    test.skipIf(SKIP_DOCKER_TESTS)(
       "should pull and manage mcp/aws-core-mcp-server container with TOFU model",
       async () => {
         const containerManager = new ContainerManager(mockLogger);
@@ -188,7 +192,7 @@ describe("Container Server Integration", () => {
       90000
     ); // 90 second timeout for Docker operations
 
-    test.skipIf(shouldSkipDockerTests)(
+    test.skipIf(SKIP_DOCKER_TESTS)(
       "should handle pullWhenDigestChanges flag correctly",
       async () => {
         const containerManager = new ContainerManager(mockLogger);
@@ -228,7 +232,7 @@ describe("Container Server Integration", () => {
   });
 
   describe("Container MCP Client", () => {
-    test.skipIf(shouldSkipDockerTests)(
+    test.skipIf(SKIP_DOCKER_TESTS)(
       "should create and communicate with mcp/aws-core-mcp-server container",
       async () => {
         const client = new ContainerMcpClient({
@@ -297,7 +301,7 @@ describe("Container Server Integration", () => {
       45000
     ); // 45 second timeout for full container lifecycle
 
-    test.skipIf(shouldSkipDockerTests)(
+    test.skipIf(SKIP_DOCKER_TESTS)(
       "should handle container lifecycle properly",
       async () => {
         const client = new ContainerMcpClient({
