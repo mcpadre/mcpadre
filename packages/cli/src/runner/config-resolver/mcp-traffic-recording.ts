@@ -21,7 +21,7 @@ import type { McpServerV1 } from "../../config/types/v1/server/index.js";
  * @param workspaceConfig Workspace-level project configuration
  * @returns true if MCP traffic logging should be enabled, false otherwise
  */
-export function shouldLogMcpTraffic(
+export function shouldRecordMcpTraffic(
   serverConfig: McpServerV1,
   workspaceConfig: SettingsProject
 ): boolean {
@@ -52,8 +52,8 @@ export function shouldLogMcpTraffic(
  * @param serverConfig Server configuration to check
  * @returns true if the server supports logMcpTraffic option
  */
-export function supportsTrafficLogging(serverConfig: McpServerV1): boolean {
-  // Only shell servers support traffic logging
+export function supportsTrafficRecording(serverConfig: McpServerV1): boolean {
+  // Only shell servers support traffic recording
   return "shell" in serverConfig;
 }
 
@@ -64,7 +64,7 @@ export function supportsTrafficLogging(serverConfig: McpServerV1): boolean {
  * @param workspaceConfig Workspace-level project configuration
  * @returns Object with logging enabled flag and source of the setting
  */
-export function getLoggingConfig(
+export function getRecordingConfig(
   serverConfig: McpServerV1,
   workspaceConfig: SettingsProject
 ): {

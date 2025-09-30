@@ -6,7 +6,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { McpTrafficLogger } from "./mcp-traffic-logger.js";
+import { McpTrafficRecorder } from "./mcp-traffic-recorder";
 
 import type {
   JsonRpcRequest,
@@ -35,7 +35,7 @@ describe("McpTrafficLogger", () => {
 
   describe("processRequest", () => {
     it("should log request and continue with original request", async () => {
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         method: "test/method",
@@ -68,7 +68,7 @@ describe("McpTrafficLogger", () => {
     });
 
     it("should handle requests without id", async () => {
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         method: "test/notification",
@@ -88,7 +88,7 @@ describe("McpTrafficLogger", () => {
     });
 
     it("should handle requests without params", async () => {
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         method: "test/simple",
@@ -110,7 +110,7 @@ describe("McpTrafficLogger", () => {
     it("should continue processing even if logging fails", async () => {
       // Use an invalid file path to trigger logging error
       const invalidLogPath = "/root/invalid/path/test.jsonl";
-      const logger = new McpTrafficLogger(invalidLogPath);
+      const logger = new McpTrafficRecorder(invalidLogPath);
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         method: "test/method",
@@ -132,7 +132,7 @@ describe("McpTrafficLogger", () => {
 
   describe("processResponse", () => {
     it("should log response and continue with original response", async () => {
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const response: JsonRpcResponse = {
         jsonrpc: "2.0",
         id: 1,
@@ -164,7 +164,7 @@ describe("McpTrafficLogger", () => {
     });
 
     it("should handle error responses", async () => {
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const response: JsonRpcResponse = {
         jsonrpc: "2.0",
         id: 1,
@@ -188,7 +188,7 @@ describe("McpTrafficLogger", () => {
     });
 
     it("should handle responses with null id", async () => {
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const response: JsonRpcResponse = {
         jsonrpc: "2.0",
         id: null,
@@ -209,7 +209,7 @@ describe("McpTrafficLogger", () => {
 
     it("should continue processing even if logging fails", async () => {
       const invalidLogPath = "/root/invalid/path/test.jsonl";
-      const logger = new McpTrafficLogger(invalidLogPath);
+      const logger = new McpTrafficRecorder(invalidLogPath);
       const response: JsonRpcResponse = {
         jsonrpc: "2.0",
         id: 1,
@@ -231,7 +231,7 @@ describe("McpTrafficLogger", () => {
 
   describe("request and response logging together", () => {
     it("should log both requests and responses to the same file", async () => {
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         method: "test/method",
@@ -275,7 +275,7 @@ describe("McpTrafficLogger", () => {
         "utf8"
       );
 
-      const logger = new McpTrafficLogger(logFilePath);
+      const logger = new McpTrafficRecorder(logFilePath);
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         method: "new/method",
@@ -301,8 +301,8 @@ describe("McpTrafficLogger", () => {
 
   describe("interceptor interface", () => {
     it("should have correct name", () => {
-      const logger = new McpTrafficLogger(logFilePath);
-      expect(logger.name).toBe("MCP Traffic Logger");
+      const recorder = new McpTrafficRecorder(logFilePath);
+      expect(recorder.name).toBe("MCP Traffic Recorder");
     });
   });
 });

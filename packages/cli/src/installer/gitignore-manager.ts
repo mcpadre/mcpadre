@@ -129,7 +129,7 @@ export async function removeFromGitignore(
 export function getMcpadreGitignorePatterns(): string[] {
   return [
     ".mcpadre/logs",
-    ".mcpadre/servers/*/logs",
+    ".mcpadre/traffic",
     ".mcpadre/servers/*/.venv",
     ".mcpadre/servers/*/node_modules",
   ];

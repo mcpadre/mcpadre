@@ -39,10 +39,13 @@ export async function createServerDirectory(
  * @param logsDir Directory where logs should be stored
  * @returns Full path to the log file
  */
-export function createLogFilePath(serverName: string, logsDir: string): string {
+export function createRecordingFilePath(
+  serverName: string,
+  recordingDir: string
+): string {
   const timestamp = new Date().toISOString();
   const filename = `${serverName}__${timestamp}.jsonl`;
-  return join(logsDir, filename);
+  return join(recordingDir, filename);
 }
 
 /**
@@ -66,7 +69,7 @@ export function getServerDirectoryPath(
  * @param serverName Name of the MCP server
  * @returns Logs directory path
  */
-export function getLogsDirectoryPath(
+export function getTrafficRecordingDirectoryPath(
   context: WorkspaceContext,
   serverName: string
 ): string {

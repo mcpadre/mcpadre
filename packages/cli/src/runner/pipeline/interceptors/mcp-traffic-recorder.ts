@@ -1,5 +1,5 @@
 // pattern: Mixed (unavoidable)
-// Logging interceptor requires I/O operations integrated with request/response processing
+// Recording interceptor requires I/O operations integrated with request/response processing
 
 import { appendFile } from "fs/promises";
 
@@ -14,40 +14,40 @@ import type {
 } from "../types.js";
 
 /**
- * Log entry for JSON-RPC requests
+ * Entry for JSON-RPC requests in traffic recording
  */
-interface McpTrafficRequestLogEntry {
+interface McpTrafficRequestEntry {
   timestamp: string;
   id?: string | number | null | undefined;
   req: JsonRpcRequest;
 }
 
 /**
- * Log entry for JSON-RPC responses
+ * Entry for JSON-RPC responses in traffic recording
  */
-interface McpTrafficResponseLogEntry {
+interface McpTrafficResponseEntry {
   timestamp: string;
   id?: string | number | null | undefined;
   res: JsonRpcResponse;
 }
 
 /**
- * MCP Traffic Logger Interceptor
+ * MCP Traffic Recorder Interceptor
  *
- * Logs all JSON-RPC requests and responses to a JSONL file when enabled.
+ * Records all JSON-RPC requests and responses to a JSONL file when enabled.
  * Must be the first (zeroth) interceptor in the pipeline chain.
  *
- * Log format: One JSON object per line (JSONL)
+ * Recording format: One JSON object per line (JSONL)
  * - Requests: { "timestamp": "...", "id": "...", "req": { -- request body -- } }
  * - Responses: { "timestamp": "...", "id": "...", "res": { -- response body -- } }
  */
-export class McpTrafficLogger implements Interceptor {
-  readonly name = "MCP Traffic Logger";
+export class McpTrafficRecorder implements Interceptor {
+  readonly name = "MCP Traffic Recorder";
 
-  constructor(private readonly logFilePath: string) {}
+  constructor(private readonly recordingFilePath: string) {}
 
   /**
-   * Process an incoming request and log it
+   * Process an incoming request and record it
    *
    * @param request The JSON-RPC request to process
    * @returns Continuation result with the original request
@@ -56,16 +56,16 @@ export class McpTrafficLogger implements Interceptor {
     request: JsonRpcRequest
   ): Promise<InterceptorRequestResult> {
     try {
-      const logEntry: McpTrafficRequestLogEntry = {
+      const recordingEntry: McpTrafficRequestEntry = {
         timestamp: new Date().toISOString(),
         id: request.id,
         req: request,
       };
 
-      const logLine = `${JSON.stringify(logEntry)}\n`;
-      await appendFile(this.logFilePath, logLine, "utf8");
+      const recordingLine = `${JSON.stringify(recordingEntry)}\n`;
+      await appendFile(this.recordingFilePath, recordingLine, "utf8");
     } catch {
-      // Log errors should not crash the MCP server
+      // Recording errors should not crash the MCP server
       // In a production environment, we might want to log this error
       // to a separate error log, but for now we silently continue
     }
@@ -78,7 +78,7 @@ export class McpTrafficLogger implements Interceptor {
   }
 
   /**
-   * Process an outgoing response and log it
+   * Process an outgoing response and record it
    *
    * @param response The JSON-RPC response to process
    * @returns Continuation result with the original response
@@ -87,17 +87,17 @@ export class McpTrafficLogger implements Interceptor {
     response: JsonRpcResponse
   ): Promise<InterceptorResponseResult> {
     try {
-      const logEntry: McpTrafficResponseLogEntry = {
+      const recordingEntry: McpTrafficResponseEntry = {
         timestamp: new Date().toISOString(),
         id: response.id,
         res: response,
       };
 
-      const logLine = `${JSON.stringify(logEntry)}\n`;
-      await appendFile(this.logFilePath, logLine, "utf8");
+      const recordingLine = `${JSON.stringify(recordingEntry)}\n`;
+      await appendFile(this.recordingFilePath, recordingLine, "utf8");
     } catch {
-      // Log errors should not crash the MCP server
-      // In a production environment, we might want to log this error
+      // Recording errors should not crash the MCP server
+      // In a production environment, we might want to record this error
       // to a separate error log, but for now we silently continue
     }
 

@@ -98,10 +98,10 @@ describe("Workspace Unification", () => {
       );
 
       expect(userLogsPath).toBe(
-        "/home/user/.mcpadre/.mcpadre/servers/log-server/logs"
+        "/home/user/.mcpadre/.mcpadre/traffic/log-server"
       );
       expect(projectLogsPath).toBe(
-        "/projects/myapp/.mcpadre/servers/log-server/logs"
+        "/projects/myapp/.mcpadre/traffic/log-server"
       );
 
       // Verify identical relative paths
@@ -112,7 +112,7 @@ describe("Workspace Unification", () => {
       );
 
       expect(userRelative).toBe(projectRelative);
-      expect(userRelative).toBe("/.mcpadre/servers/log-server/logs");
+      expect(userRelative).toBe("/.mcpadre/traffic/log-server");
     });
 
     it("should maintain path structure invariant for server data", () => {
@@ -245,34 +245,35 @@ describe("Workspace Unification", () => {
 
       // Expected directory structure for both modes (relative to workspace)
       const expectedServerDir = ".mcpadre/servers/hierarchy-test";
-      const expectedLogsDir = ".mcpadre/servers/hierarchy-test/logs";
+      const expectedRecordingDir = ".mcpadre/traffic/hierarchy-test";
       const expectedDataDir = ".mcpadre/servers/hierarchy-test/data";
 
       // User mode paths
       const userServerPath = getServerPath(userContext, serverName);
-      const userLogsPath = getMcpTrafficRecordingPath(userContext, serverName);
+      const userRecordingPath = getMcpTrafficRecordingPath(
+        userContext,
+        serverName
+      );
       const userDataPath = getServerDataPath(userContext, serverName);
 
       expect(userServerPath.endsWith(expectedServerDir)).toBe(true);
-      expect(userLogsPath.endsWith(expectedLogsDir)).toBe(true);
+      expect(userRecordingPath.endsWith(expectedRecordingDir)).toBe(true);
       expect(userDataPath.endsWith(expectedDataDir)).toBe(true);
 
       // Project mode paths
       const projectServerPath = getServerPath(projectContext, serverName);
-      const projectLogsPath = getMcpTrafficRecordingPath(
+      const projectRecordingPath = getMcpTrafficRecordingPath(
         projectContext,
         serverName
       );
       const projectDataPath = getServerDataPath(projectContext, serverName);
 
       expect(projectServerPath.endsWith(expectedServerDir)).toBe(true);
-      expect(projectLogsPath.endsWith(expectedLogsDir)).toBe(true);
+      expect(projectRecordingPath.endsWith(expectedRecordingDir)).toBe(true);
       expect(projectDataPath.endsWith(expectedDataDir)).toBe(true);
 
-      // Verify the hierarchy is consistent
-      expect(userLogsPath.startsWith(userServerPath)).toBe(true);
+      // Verify data hierarchy is consistent (recording dir is separate from server dir)
       expect(userDataPath.startsWith(userServerPath)).toBe(true);
-      expect(projectLogsPath.startsWith(projectServerPath)).toBe(true);
       expect(projectDataPath.startsWith(projectServerPath)).toBe(true);
     });
 
@@ -283,19 +284,20 @@ describe("Workspace Unification", () => {
 
       contexts.forEach(context => {
         const basePath = getServerPath(context, serverName);
-        const logsPath = getMcpTrafficRecordingPath(context, serverName);
+        const recordingPath = getMcpTrafficRecordingPath(context, serverName);
         const dataPath = getServerDataPath(context, serverName);
 
-        // All paths should be under the base server path
-        expect(logsPath.startsWith(basePath)).toBe(true);
+        // Data path should be under the base server path
         expect(dataPath.startsWith(basePath)).toBe(true);
 
-        // Paths should end with expected suffixes
-        expect(logsPath.endsWith("/logs")).toBe(true);
+        // Recording path is separate from server path (in .mcpadre/traffic/)
+        expect(recordingPath.includes("/traffic/")).toBe(true);
+        expect(recordingPath.endsWith(serverName)).toBe(true);
+
+        // Data path should end with expected suffix
         expect(dataPath.endsWith("/data")).toBe(true);
 
-        // Verify path construction using join
-        expect(logsPath).toBe(join(basePath, "logs"));
+        // Verify path construction using join for data
         expect(dataPath).toBe(join(basePath, "data"));
       });
     });
@@ -385,24 +387,24 @@ describe("Workspace Unification", () => {
       );
     });
 
-    it("should maintain logs path structure invariant", () => {
+    it("should maintain traffic recording path structure invariant", () => {
       fc.assert(
         fc.property(serverNameArbitrary, serverName => {
-          const userLogsPath = getMcpTrafficRecordingPath(
+          const userRecordingPath = getMcpTrafficRecordingPath(
             userContext,
             serverName
           );
-          const projectLogsPath = getMcpTrafficRecordingPath(
+          const projectRecordingPath = getMcpTrafficRecordingPath(
             projectContext,
             serverName
           );
 
           // Remove workspace roots and compare
-          const userRelative = userLogsPath.replace(
+          const userRelative = userRecordingPath.replace(
             userContext.workspaceDir,
             ""
           );
-          const projectRelative = projectLogsPath.replace(
+          const projectRelative = projectRecordingPath.replace(
             projectContext.workspaceDir,
             ""
           );
@@ -412,8 +414,8 @@ describe("Workspace Unification", () => {
             projectRelative.replace(/\\/g, "/")
           );
 
-          // Must end with /logs
-          expect(userRelative.replace(/\\/g, "/")).toMatch(/\/logs$/);
+          // Must include /traffic/
+          expect(userRelative.replace(/\\/g, "/")).toMatch(/\/traffic\//);
         }),
         { numRuns: 100 }
       );
@@ -479,16 +481,20 @@ describe("Workspace Unification", () => {
       fc.assert(
         fc.property(serverNameArbitrary, serverName => {
           const serverPath = getServerPath(userContext, serverName);
-          const logsPath = getMcpTrafficRecordingPath(userContext, serverName);
+          const recordingPath = getMcpTrafficRecordingPath(
+            userContext,
+            serverName
+          );
           const dataPath = getServerDataPath(userContext, serverName);
 
-          // Logs and data paths must be under server path
-          expect(logsPath.startsWith(serverPath)).toBe(true);
+          // Only data path must be under server path
           expect(dataPath.startsWith(serverPath)).toBe(true);
 
-          // Must be exactly subdirectories of server path
-          expect(logsPath).toBe(join(serverPath, "logs"));
+          // Data must be exactly a subdirectory of server path
           expect(dataPath).toBe(join(serverPath, "data"));
+
+          // Recording path is in separate traffic directory
+          expect(recordingPath.includes("/traffic/")).toBe(true);
         }),
         { numRuns: 100 }
       );

@@ -1,9 +1,9 @@
 // pattern: Functional Core
 
-import { shouldLogMcpTraffic } from "../config-resolver/mcp-traffic.js";
-import { McpTrafficLogger } from "../pipeline/interceptors/mcp-traffic-logger.js";
+import { shouldRecordMcpTraffic } from "../config-resolver/mcp-traffic-recording";
+import { McpTrafficRecorder } from "../pipeline/interceptors/mcp-traffic-recorder";
 import {
-  createLogFilePath,
+  createRecordingFilePath,
   createServerDirectory,
 } from "../server-directory/index.js";
 
@@ -43,14 +43,14 @@ export async function createSessionWithInterceptors(
   } = options;
 
   // Check if MCP traffic logging should be enabled
-  const loggingEnabled = shouldLogMcpTraffic(serverConfig, projectConfig);
+  const loggingEnabled = shouldRecordMcpTraffic(serverConfig, projectConfig);
   let logFilePath: string | undefined;
 
   if (loggingEnabled) {
     logger.debug("MCP traffic logging enabled, setting up log file");
     try {
       const logsDir = await createServerDirectory(context, serverName);
-      logFilePath = createLogFilePath(serverName, logsDir);
+      logFilePath = createRecordingFilePath(serverName, logsDir);
       logger.debug({ logFilePath }, "Created log file path for MCP traffic");
     } catch (error) {
       logger.warn(
@@ -63,7 +63,7 @@ export async function createSessionWithInterceptors(
   // Set up interceptors array, with logging interceptor first if enabled
   const interceptors = [];
   if (logFilePath) {
-    interceptors.push(new McpTrafficLogger(logFilePath));
+    interceptors.push(new McpTrafficRecorder(logFilePath));
     logger.debug("Added MCP traffic logging interceptor as first interceptor");
   }
 

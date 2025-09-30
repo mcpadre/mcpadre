@@ -687,7 +687,7 @@ hosts:
 
             // mcpadre server-specific patterns
             expect(gitignoreContent).toContain(".mcpadre/logs");
-            expect(gitignoreContent).toContain(".mcpadre/servers/*/logs");
+            expect(gitignoreContent).toContain(".mcpadre/traffic");
             expect(gitignoreContent).toContain(".mcpadre/servers/*/.venv");
             expect(gitignoreContent).toContain(
               ".mcpadre/servers/*/node_modules"

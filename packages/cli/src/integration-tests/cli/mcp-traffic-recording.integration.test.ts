@@ -94,24 +94,22 @@ describe("MCP Traffic Logging Integration", () => {
         await terminateProcess(proc);
 
         // Verify directory structure exists
-        const serverDir = join(
+        const recordingDir = join(
           tempProject.path,
           ".mcpadre",
-          "servers",
+          "traffic",
           "test-server-logging-enabled"
         );
-        const logsDir = join(serverDir, "logs");
 
-        expect(existsSync(serverDir)).toBe(true);
-        expect(existsSync(logsDir)).toBe(true);
+        expect(existsSync(recordingDir)).toBe(true);
 
-        // Verify log file was created with correct naming pattern
-        const logFiles = readdirSync(logsDir);
-        expect(logFiles.length).toBeGreaterThan(0);
+        // Verify recording file was created with correct naming pattern
+        const recordingFiles = readdirSync(recordingDir);
+        expect(recordingFiles.length).toBeGreaterThan(0);
 
-        const logFile = logFiles[0];
+        const recordingFile = recordingFiles[0];
         // Verify filename format: server-name__YYYY-MM-DDTHH:mm:ss.sssZ.jsonl
-        expect(logFile).toMatch(
+        expect(recordingFile).toMatch(
           /^test-server-logging-enabled__\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\.jsonl$/
         );
       })
@@ -224,30 +222,29 @@ describe("MCP Traffic Logging Integration", () => {
         // Terminate the process
         await terminateProcess(proc);
 
-        // Find and read the log file
-        const logsDir = join(
+        // Find and read the recording file
+        const recordingDir = join(
           tempProject.path,
           ".mcpadre",
-          "servers",
-          "test-server-logging-enabled",
-          "logs"
+          "traffic",
+          "test-server-logging-enabled"
         );
-        expect(existsSync(logsDir)).toBe(true);
+        expect(existsSync(recordingDir)).toBe(true);
 
-        const logFiles = readdirSync(logsDir);
-        expect(logFiles.length).toBeGreaterThan(0);
+        const recordingFiles = readdirSync(recordingDir);
+        expect(recordingFiles.length).toBeGreaterThan(0);
 
-        const logFilePath = join(logsDir, logFiles[0]!);
-        const logContent = await readFile(logFilePath, "utf8");
+        const recordingFilePath = join(recordingDir, recordingFiles[0]!);
+        const recordingContent = await readFile(recordingFilePath, "utf8");
 
-        expect(logContent.trim()).not.toBe("");
-        const logLines = logContent.trim().split("\n");
+        expect(recordingContent.trim()).not.toBe("");
+        const recordingLines = recordingContent.trim().split("\n");
 
-        // Should have at least 2 log entries (1 request + 1 response minimum)
-        expect(logLines.length).toBeGreaterThanOrEqual(2);
+        // Should have at least 2 recording entries (1 request + 1 response minimum)
+        expect(recordingLines.length).toBeGreaterThanOrEqual(2);
 
         // Each line should be valid JSON with either req or res property
-        for (const line of logLines) {
+        for (const line of recordingLines) {
           const logEntry = JSON.parse(line);
           expect(logEntry).toHaveProperty("timestamp");
           expect(logEntry.timestamp).toMatch(

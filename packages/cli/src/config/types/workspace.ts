@@ -46,7 +46,7 @@ export function getMcpTrafficRecordingPath(
   ctx: WorkspaceContext,
   serverName: string
 ): string {
-  return join(ctx.workspaceDir, ".mcpadre", "servers", serverName, "logs");
+  return join(ctx.workspaceDir, ".mcpadre", "traffic", serverName);
 }
 
 export function getServerDataPath(

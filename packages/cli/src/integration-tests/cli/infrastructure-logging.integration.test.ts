@@ -210,29 +210,28 @@ describe("Infrastructure Logging Integration", () => {
           expect(infraLogFiles.length).toBe(1);
           expect(infraLogFiles[0]).toMatch(/^test-both-logs_.*\.log$/);
 
-          // Verify MCP traffic logs are in .mcpadre/servers/test-both-logs/logs/
-          const mcpLogsDir = join(
+          // Verify MCP traffic recordings are in .mcpadre/traffic/test-both-logs/
+          const mcpRecordingDir = join(
             projectWithLogging.path,
             ".mcpadre",
-            "servers",
-            "test-both-logs",
-            "logs"
+            "traffic",
+            "test-both-logs"
           );
-          expect(existsSync(mcpLogsDir)).toBe(true);
+          expect(existsSync(mcpRecordingDir)).toBe(true);
 
-          const mcpLogFiles = readdirSync(mcpLogsDir);
-          expect(mcpLogFiles.length).toBe(1);
-          expect(mcpLogFiles[0]).toMatch(/^test-both-logs__.*\.jsonl$/);
+          const mcpRecordingFiles = readdirSync(mcpRecordingDir);
+          expect(mcpRecordingFiles.length).toBe(1);
+          expect(mcpRecordingFiles[0]).toMatch(/^test-both-logs__.*\.jsonl$/);
 
           // Verify infrastructure log contains startup messages
           const infraLogPath = join(infraLogsDir, infraLogFiles[0]!);
           const infraLogContent = await readFile(infraLogPath, "utf8");
           expect(infraLogContent).toContain("Starting");
 
-          // Verify MCP log contains JSON-RPC messages
-          const mcpLogPath = join(mcpLogsDir, mcpLogFiles[0]!);
-          const mcpLogContent = await readFile(mcpLogPath, "utf8");
-          const mcpLogLines = mcpLogContent.trim().split("\n");
+          // Verify MCP recording contains JSON-RPC messages
+          const mcpRecordingPath = join(mcpRecordingDir, mcpRecordingFiles[0]!);
+          const mcpRecordingContent = await readFile(mcpRecordingPath, "utf8");
+          const mcpLogLines = mcpRecordingContent.trim().split("\n");
 
           // Should have request/response pairs
           expect(mcpLogLines.length).toBeGreaterThanOrEqual(2);

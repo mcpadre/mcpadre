@@ -3,10 +3,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  getLoggingConfig,
-  shouldLogMcpTraffic,
-  supportsTrafficLogging,
-} from "./mcp-traffic.js";
+  getRecordingConfig,
+  shouldRecordMcpTraffic,
+  supportsTrafficRecording,
+} from "./mcp-traffic-recording";
 
 import type { SettingsProject } from "../../config/types/index.js";
 import type {
@@ -47,35 +47,35 @@ describe("MCP Traffic Configuration Resolution", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig();
 
-      expect(shouldLogMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
+      expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
     });
 
     it("should return true when workspace config enables logging", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig(true);
 
-      expect(shouldLogMcpTraffic(serverConfig, workspaceConfig)).toBe(true);
+      expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(true);
     });
 
     it("should return false when workspace config explicitly disables logging", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig(false);
 
-      expect(shouldLogMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
+      expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
     });
 
     it("should return true when server config enables logging", () => {
       const serverConfig = createShellServerConfig(true);
       const workspaceConfig = createWorkspaceConfig(false);
 
-      expect(shouldLogMcpTraffic(serverConfig, workspaceConfig)).toBe(true);
+      expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(true);
     });
 
     it("should return false when server config explicitly disables logging", () => {
       const serverConfig = createShellServerConfig(false);
       const workspaceConfig = createWorkspaceConfig(true);
 
-      expect(shouldLogMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
+      expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
     });
 
     it("should prefer server-level setting over workspace-level setting", () => {
@@ -86,12 +86,12 @@ describe("MCP Traffic Configuration Resolution", () => {
 
       // Server enabled should override workspace disabled
       expect(
-        shouldLogMcpTraffic(serverConfigEnabled, workspaceConfigDisabled)
+        shouldRecordMcpTraffic(serverConfigEnabled, workspaceConfigDisabled)
       ).toBe(true);
 
       // Server disabled should override workspace enabled
       expect(
-        shouldLogMcpTraffic(serverConfigDisabled, workspaceConfigEnabled)
+        shouldRecordMcpTraffic(serverConfigDisabled, workspaceConfigEnabled)
       ).toBe(false);
     });
 
@@ -102,10 +102,10 @@ describe("MCP Traffic Configuration Resolution", () => {
 
       // HTTP servers should fall back to workspace config
       expect(
-        shouldLogMcpTraffic(httpServerConfig, workspaceConfigEnabled)
+        shouldRecordMcpTraffic(httpServerConfig, workspaceConfigEnabled)
       ).toBe(true);
       expect(
-        shouldLogMcpTraffic(httpServerConfig, workspaceConfigDisabled)
+        shouldRecordMcpTraffic(httpServerConfig, workspaceConfigDisabled)
       ).toBe(false);
     });
 
@@ -116,19 +116,19 @@ describe("MCP Traffic Configuration Resolution", () => {
         mcpServers: {},
       };
 
-      expect(shouldLogMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
+      expect(shouldRecordMcpTraffic(serverConfig, workspaceConfig)).toBe(false);
     });
   });
 
   describe("supportsTrafficLogging", () => {
     it("should return true for stdio/shell servers", () => {
       const shellServerConfig = createShellServerConfig();
-      expect(supportsTrafficLogging(shellServerConfig)).toBe(true);
+      expect(supportsTrafficRecording(shellServerConfig)).toBe(true);
     });
 
     it("should return false for HTTP servers", () => {
       const httpServerConfig = createHttpServerConfig();
-      expect(supportsTrafficLogging(httpServerConfig)).toBe(false);
+      expect(supportsTrafficRecording(httpServerConfig)).toBe(false);
     });
   });
 
@@ -137,7 +137,7 @@ describe("MCP Traffic Configuration Resolution", () => {
       const serverConfig = createShellServerConfig(true);
       const workspaceConfig = createWorkspaceConfig(false);
 
-      const result = getLoggingConfig(serverConfig, workspaceConfig);
+      const result = getRecordingConfig(serverConfig, workspaceConfig);
 
       expect(result).toEqual({
         enabled: true,
@@ -149,7 +149,7 @@ describe("MCP Traffic Configuration Resolution", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig(true);
 
-      const result = getLoggingConfig(serverConfig, workspaceConfig);
+      const result = getRecordingConfig(serverConfig, workspaceConfig);
 
       expect(result).toEqual({
         enabled: true,
@@ -161,7 +161,7 @@ describe("MCP Traffic Configuration Resolution", () => {
       const serverConfig = createShellServerConfig();
       const workspaceConfig = createWorkspaceConfig();
 
-      const result = getLoggingConfig(serverConfig, workspaceConfig);
+      const result = getRecordingConfig(serverConfig, workspaceConfig);
 
       expect(result).toEqual({
         enabled: false,
@@ -173,7 +173,7 @@ describe("MCP Traffic Configuration Resolution", () => {
       const serverConfigDisabled = createShellServerConfig(false);
       const workspaceConfigEnabled = createWorkspaceConfig(true);
 
-      const result = getLoggingConfig(
+      const result = getRecordingConfig(
         serverConfigDisabled,
         workspaceConfigEnabled
       );
@@ -188,7 +188,7 @@ describe("MCP Traffic Configuration Resolution", () => {
       const httpServerConfig = createHttpServerConfig();
       const workspaceConfig = createWorkspaceConfig(true);
 
-      const result = getLoggingConfig(httpServerConfig, workspaceConfig);
+      const result = getRecordingConfig(httpServerConfig, workspaceConfig);
 
       expect(result).toEqual({
         enabled: true,
