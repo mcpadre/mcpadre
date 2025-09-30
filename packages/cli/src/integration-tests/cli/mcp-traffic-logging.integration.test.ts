@@ -118,6 +118,65 @@ describe("MCP Traffic Logging Integration", () => {
     );
   });
 
+  describe("logging disabled behavior", () => {
+    it(
+      "should NOT create MCP traffic log files when logging is disabled",
+      withProcess(async spawn => {
+        // Start the CLI process with logging disabled
+        const proc = spawn(["run", "test-server-logging-disabled"], {
+          cwd: tempProject.path,
+          buffer: false,
+        });
+
+        // Wait for connection message
+        await waitForPattern(
+          proc,
+          "Connected to shell server test-server-logging-disabled",
+          5000
+        );
+
+        // Send initialize request to trigger MCP traffic
+        const initResponse = await sendJsonRpc(proc, {
+          jsonrpc: "2.0",
+          method: "initialize",
+          id: 1,
+          params: {
+            protocolVersion: "2024-11-05",
+            capabilities: {},
+            clientInfo: { name: "test-client", version: "1.0.0" },
+          },
+        });
+
+        expect(initResponse.id).toBe(1);
+        expect("result" in initResponse || "error" in initResponse).toBe(true);
+
+        // Send a tools/list request for additional traffic
+        const toolsResponse = await sendJsonRpc(proc, {
+          jsonrpc: "2.0",
+          method: "tools/list",
+          id: 2,
+        });
+
+        expect(toolsResponse.id).toBe(2);
+
+        // Terminate the process
+        await terminateProcess(proc);
+
+        // Verify that NO MCP traffic log files were created
+        const logsDir = join(
+          tempProject.path,
+          ".mcpadre",
+          "servers",
+          "test-server-logging-disabled",
+          "logs"
+        );
+
+        // The logs directory itself should NOT exist when logging is disabled
+        expect(existsSync(logsDir)).toBe(false);
+      })
+    );
+  });
+
   describe("log content format verification", () => {
     it(
       "should log in correct JSONL format when enabled",

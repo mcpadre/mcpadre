@@ -42,7 +42,7 @@ export function getConfigPath(ctx: WorkspaceContext): string {
   return join(ctx.workspaceDir, "mcpadre.yaml");
 }
 
-export function getServerLogsPath(
+export function getMcpTrafficRecordingPath(
   ctx: WorkspaceContext,
   serverName: string
 ): string {

@@ -8,7 +8,6 @@ import { split } from "shlex";
 
 import { ContainerLockManager } from "../../../installer/container-lock.js";
 import { addToServerGitignore } from "../../../installer/gitignore-manager.js";
-import { createServerLogger } from "../../../logger/server-logger.js";
 import { applyTemplate } from "../../../utils/string-templating/index.js";
 import {
   createServerDirectory,
@@ -173,17 +172,8 @@ export async function startContainerServer(
     logger,
   });
 
-  // Create dedicated server logger for debugging MCP server communication
-  const serverLogger = await createServerLogger(
-    serverName,
-    directoryResolver.workspace,
-    "trace", // Use trace level to capture all our detailed debugging logs
-    context
-  );
-  logger.debug(
-    { serverName, logLevel: "trace" },
-    "Created dedicated server logger for MCP communication debugging"
-  );
+  // Create child logger for server-specific logging
+  const serverLogger = logger.child({ serverName });
 
   // Parse command if provided
   let commandParts: string[] | undefined = undefined;

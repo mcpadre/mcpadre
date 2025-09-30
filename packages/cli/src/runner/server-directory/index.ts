@@ -4,7 +4,7 @@ import { mkdir } from "fs/promises";
 import { join } from "path";
 
 import {
-  getServerLogsPath,
+  getMcpTrafficRecordingPath,
   getServerPath,
 } from "../../config/types/workspace.js";
 
@@ -23,7 +23,7 @@ export async function createServerDirectory(
   context: WorkspaceContext,
   serverName: string
 ): Promise<string> {
-  const logsDir = getServerLogsPath(context, serverName);
+  const logsDir = getMcpTrafficRecordingPath(context, serverName);
 
   // Create the directory structure recursively
   await mkdir(logsDir, { recursive: true });
@@ -70,5 +70,5 @@ export function getLogsDirectoryPath(
   context: WorkspaceContext,
   serverName: string
 ): string {
-  return getServerLogsPath(context, serverName);
+  return getMcpTrafficRecordingPath(context, serverName);
 }

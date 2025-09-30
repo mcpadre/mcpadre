@@ -1,6 +1,5 @@
 // pattern: Functional Core
 
-import { createServerLogger } from "../../../logger/server-logger.js";
 import { resolveEnvVars } from "../../env-resolver/index.js";
 import { createSessionWithInterceptors } from "../../session/startup.js";
 import { setupServerEnvironment } from "../common/startup-utils.js";
@@ -35,17 +34,8 @@ export async function startHttpServer(
     logger,
   });
 
-  // Create dedicated server logger for debugging MCP server communication
-  const serverLogger = await createServerLogger(
-    serverName,
-    directoryResolver.workspace,
-    "trace", // Use trace level to capture all our detailed debugging logs
-    context
-  );
-  logger.debug(
-    { serverName, logLevel: "trace" },
-    "Created dedicated server logger for MCP communication debugging"
-  );
+  // Create child logger for server-specific logging
+  const serverLogger = logger.child({ serverName });
 
   // Process header variables using resolveEnvVars() (HTTP-specific)
   const resolvedHeaders = await resolveEnvVars({

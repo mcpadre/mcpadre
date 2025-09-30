@@ -4,7 +4,6 @@ import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { createServerLogger } from "../../../logger/server-logger.js";
 import { getServerDirectoryPath } from "../../server-directory/index.js";
 import { createSessionWithInterceptors } from "../../session/startup.js";
 import {
@@ -302,17 +301,8 @@ export async function startNodeServer(
     "Node.js server configuration"
   );
 
-  // Create dedicated server logger for debugging MCP server communication
-  const serverLogger = await createServerLogger(
-    serverName,
-    directoryResolver.workspace,
-    "trace", // Use trace level to capture all our detailed debugging logs
-    context
-  );
-  logger.debug(
-    { serverName, logLevel: "trace" },
-    "Created dedicated server logger for MCP communication debugging"
-  );
+  // Create child logger for server-specific logging
+  const serverLogger = logger.child({ serverName });
 
   // Extract workspace options for sandbox configuration
   const workspaceOptions: WorkspaceServerOptions | undefined =

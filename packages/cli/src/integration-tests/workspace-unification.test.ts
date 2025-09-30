@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   getConfigPath,
+  getMcpTrafficRecordingPath,
   getServerDataPath,
-  getServerLogsPath,
   getServerPath,
 } from "../config/types/workspace.js";
 
@@ -91,8 +91,11 @@ describe("Workspace Unification", () => {
     it("should maintain path structure invariant for server logs", () => {
       const serverName = "log-server";
 
-      const userLogsPath = getServerLogsPath(userContext, serverName);
-      const projectLogsPath = getServerLogsPath(projectContext, serverName);
+      const userLogsPath = getMcpTrafficRecordingPath(userContext, serverName);
+      const projectLogsPath = getMcpTrafficRecordingPath(
+        projectContext,
+        serverName
+      );
 
       expect(userLogsPath).toBe(
         "/home/user/.mcpadre/.mcpadre/servers/log-server/logs"
@@ -247,7 +250,7 @@ describe("Workspace Unification", () => {
 
       // User mode paths
       const userServerPath = getServerPath(userContext, serverName);
-      const userLogsPath = getServerLogsPath(userContext, serverName);
+      const userLogsPath = getMcpTrafficRecordingPath(userContext, serverName);
       const userDataPath = getServerDataPath(userContext, serverName);
 
       expect(userServerPath.endsWith(expectedServerDir)).toBe(true);
@@ -256,7 +259,10 @@ describe("Workspace Unification", () => {
 
       // Project mode paths
       const projectServerPath = getServerPath(projectContext, serverName);
-      const projectLogsPath = getServerLogsPath(projectContext, serverName);
+      const projectLogsPath = getMcpTrafficRecordingPath(
+        projectContext,
+        serverName
+      );
       const projectDataPath = getServerDataPath(projectContext, serverName);
 
       expect(projectServerPath.endsWith(expectedServerDir)).toBe(true);
@@ -277,7 +283,7 @@ describe("Workspace Unification", () => {
 
       contexts.forEach(context => {
         const basePath = getServerPath(context, serverName);
-        const logsPath = getServerLogsPath(context, serverName);
+        const logsPath = getMcpTrafficRecordingPath(context, serverName);
         const dataPath = getServerDataPath(context, serverName);
 
         // All paths should be under the base server path
@@ -382,8 +388,14 @@ describe("Workspace Unification", () => {
     it("should maintain logs path structure invariant", () => {
       fc.assert(
         fc.property(serverNameArbitrary, serverName => {
-          const userLogsPath = getServerLogsPath(userContext, serverName);
-          const projectLogsPath = getServerLogsPath(projectContext, serverName);
+          const userLogsPath = getMcpTrafficRecordingPath(
+            userContext,
+            serverName
+          );
+          const projectLogsPath = getMcpTrafficRecordingPath(
+            projectContext,
+            serverName
+          );
 
           // Remove workspace roots and compare
           const userRelative = userLogsPath.replace(
@@ -467,7 +479,7 @@ describe("Workspace Unification", () => {
       fc.assert(
         fc.property(serverNameArbitrary, serverName => {
           const serverPath = getServerPath(userContext, serverName);
-          const logsPath = getServerLogsPath(userContext, serverName);
+          const logsPath = getMcpTrafficRecordingPath(userContext, serverName);
           const dataPath = getServerDataPath(userContext, serverName);
 
           // Logs and data paths must be under server path
