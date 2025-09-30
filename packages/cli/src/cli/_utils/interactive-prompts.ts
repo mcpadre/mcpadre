@@ -10,7 +10,8 @@ export function isInteractiveEnvironment(): boolean {
   return (
     process.stdout.isTTY &&
     process.stdin.isTTY &&
-    process.env["MCPADRE_NON_INTERACTIVE"] !== "1"
+    process.env["MCPADRE_NON_INTERACTIVE"] !== "1" &&
+    process.env["CI"] !== "true"
   );
 }
 
