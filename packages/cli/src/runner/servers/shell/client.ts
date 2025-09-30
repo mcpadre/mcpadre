@@ -28,6 +28,7 @@ export class ShellMcpClient extends BaseMcpClient {
   private isStarted = false;
   private tempScriptPath: string | null = null;
   private tempScriptCleanupTimer: NodeJS.Timeout | null = null;
+  private stderrBuffer: string[] = [];
 
   constructor(
     private readonly command: ResolvedCommandParts,
@@ -223,18 +224,35 @@ export class ShellMcpClient extends BaseMcpClient {
       });
 
       this.process.on("exit", (code, signal) => {
-        this.logger.debug(
-          { exitCode: code, signal },
-          "Shell MCP server process exited"
-        );
+        // Log exit at appropriate level based on whether we expected it
+        const logLevel = this.isStarted && code === 0 ? "debug" : "error";
+        const logData = {
+          exitCode: code,
+          signal,
+          stderr: this.stderrBuffer.join("\n"),
+        };
+
+        if (logLevel === "error") {
+          this.logger.error(
+            logData,
+            "Shell MCP server process exited unexpectedly"
+          );
+        } else {
+          this.logger.debug(logData, "Shell MCP server process exited");
+        }
+
         this.cleanup();
       });
 
-      // Log stderr output
+      // Capture stderr output for error reporting
       this.process.stderr.on("data", (chunk: Buffer) => {
         const stderr = chunk.toString("utf8").trim();
         if (stderr) {
-          this.logger.debug({ stderr }, "Shell MCP server stderr");
+          // Buffer stderr lines for exit reporting
+          this.stderrBuffer.push(stderr);
+
+          // Also log immediately at error level for visibility
+          this.logger.error({ stderr }, "Shell MCP server stderr");
         }
       });
 
@@ -356,5 +374,6 @@ export class ShellMcpClient extends BaseMcpClient {
     this.process = null;
     this.streamHandler = null;
     this.tempScriptPath = null;
+    // Note: Preserve stderr buffer for error reporting in case cleanup is called multiple times
   }
 }
