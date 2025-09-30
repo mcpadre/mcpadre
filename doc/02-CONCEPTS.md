@@ -44,11 +44,21 @@ When you run `mcpadre` from within a project that has its own `mcpadre.yaml`, th
 
 ## Key Mechanisms
 
-### Managed Execution Flow
+### MCP shims
 
-When you do `mcpadre install` (or `mcpadre install --user`) `mcpadre run` command instead of connecting directly to a server. This allows `mcpadre` to inject its management capabilities (sandboxing, configuration, environment management, logging) before the actual server process starts.
+When you do `mcpadre install` (or `mcpadre install --user`) the hosts config file is updated to invoke the `mcpadre run` command instead of connecting directly to a server. This allows `mcpadre` to inject its management capabilities (sandboxing, configuration, environment management, logging) before the actual server process starts.
 
 This redirection is established by the `mcpadre install` command, which modifies the Host's settings to use `mcpadre run` as the entry point for all servers.
+
+### Server Lifecycle & Cleanup
+
+When you run `mcpadre install`, the tool analyzes your host configurations and performs cleanup:
+
+- **Orphaned servers**: MCP servers configured to use `mcpadre run` but no longer defined in your `mcpadre.yaml` are automatically removed from host configs
+- **Orphaned directories**: Installation directories in `.mcpadre/servers/` for servers that have been removed from configuration may need manual cleanup
+- **External servers**: Servers in your host config that don't use `mcpadre run` are left untouched - these can coexist with mcpadre-managed servers
+
+This ensures your host configurations stay synchronized with your `mcpadre` configuration as you add and remove servers.
 
 ### Sandboxing
 
