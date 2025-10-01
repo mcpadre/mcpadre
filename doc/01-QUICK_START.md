@@ -6,6 +6,16 @@ This guide walks you through setting up mcpadre with Claude Code. We'll add an M
 
 ---
 
+## Step 0: Install `mcpadre`
+
+I recommend installing `mcpadre` at global scope. Right now, installing it at project scope _works_ but is less tested; please file bugs if you run into problems.
+
+```bash
+npm install -g mcpadre
+```
+
+---
+
 ## Step 1: Initialize Your Project
 
 Run `mcpadre init` to create a configuration file:
