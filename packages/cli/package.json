@@ -1,7 +1,7 @@
 {
   "name": "mcpadre",
-  "version": "0.1.1",
-  "description": "Your Swiss Army samurai sword for managing MCP servers.",
+  "version": "0.1.2",
+  "description": "It's pronounced Model Control Padre, and it's your Swiss Army knife for MCP management.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
