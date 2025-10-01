@@ -45,16 +45,19 @@ export function resolvePathTemplate(
 
 /**
  * Resolves an array of path templates to ResolvedPaths.
+ * Filters out empty or whitespace-only paths that result from undefined template variables.
  *
  * @param pathTemplates Array of template strings to resolve
  * @param options Resolution options including template variables
- * @returns Array of resolved paths
+ * @returns Array of resolved paths, excluding empty strings
  */
 export function resolvePathTemplates(
   pathTemplates: string[],
   options: PathResolverOptions
 ): ResolvedPath[] {
-  return pathTemplates.map(template => resolvePathTemplate(template, options));
+  return pathTemplates
+    .map(template => resolvePathTemplate(template, options))
+    .filter(path => path.trim() !== "");
 }
 
 /**

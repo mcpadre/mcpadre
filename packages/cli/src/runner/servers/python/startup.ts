@@ -207,6 +207,32 @@ export async function startPythonServer(
 
   logger.info(`Initializing Python server in directory: ${serverDir}`);
 
+  // Check if .venv exists; if not, run uv sync to create it
+  // This ensures the virtual environment is set up before the server runs
+  const venvPath = join(serverDir, ".venv");
+  if (!existsSync(venvPath)) {
+    logger.warn(
+      { serverDir, venvPath },
+      ".venv directory not found, running uv sync to create it"
+    );
+
+    try {
+      // Run uv sync outside sandbox to create .venv
+      execSync("uv sync --no-dev", {
+        cwd: serverDir,
+        stdio: "pipe",
+        encoding: "utf-8",
+      });
+      logger.info({ venvPath }, "Successfully created .venv via uv sync");
+    } catch (error) {
+      const errorMessage = `Failed to create .venv via uv sync: ${error}`;
+      logger.error({ error, serverDir }, errorMessage);
+      throw new Error(errorMessage);
+    }
+  } else {
+    logger.debug({ venvPath }, "Found existing .venv directory");
+  }
+
   // Perform preflight checks from the server directory
   // This ensures we respect .python-version and find the correct Python/uv
   const readPaths = await performPreflightChecks(serverDir, logger);
@@ -218,6 +244,16 @@ export async function startPythonServer(
   // Add UV cache paths that need write access
   const uvCachePaths = resolvePythonUvCachePaths();
 
+  // Add server directory to write paths to allow .venv creation/modification
+  // Security consideration: This grants the server write access to its own directory.
+  // This is acceptable because:
+  // 1. The server directory is under .mcpadre/servers/, managed by mcpadre
+  // 2. Users control what goes in mcpadre.yaml, so they implicitly trust server code
+  // 3. uv needs to create/update .venv during runtime for proper dependency management
+  // 4. Alternative would be to pre-create .venv during install, but uv may still need
+  //    to modify it (e.g., for --refresh, dependency updates, cache invalidation)
+  const allWritePaths = [...uvCachePaths, serverDir];
+
   logger.info(
     {
       pythonPackage: pythonServer.python.package,
@@ -228,6 +264,7 @@ export async function startPythonServer(
       readPaths,
       pythonSpecificPaths,
       uvCachePaths,
+      serverDirWriteAccess: true,
     },
     "Python server configuration"
   );
@@ -257,8 +294,9 @@ export async function startPythonServer(
       pythonSpecificPathsCount: pythonSpecificPaths.length,
       uvCachePathsCount: uvCachePaths.length,
       totalAllowedPathsCount: allReadPaths.length,
+      writePathsCount: allWritePaths.length,
     },
-    "Python server sandbox includes executable, version manager, and cache paths"
+    "Python server sandbox includes executable, version manager, cache, and server directory paths"
   );
 
   // Resolve sandbox configuration using shared utility with read and readwrite paths
@@ -267,7 +305,7 @@ export async function startPythonServer(
     directoryResolver,
     ...(workspaceOptions && { workspaceOptions }),
     readPaths: allReadPaths, // Python-specific: add executables + version managers + Homebrew paths
-    readWritePaths: uvCachePaths, // Python-specific: add UV cache paths
+    readWritePaths: allWritePaths, // Python-specific: add UV cache paths + server directory for .venv
     context,
     logger,
   });

@@ -28,6 +28,7 @@ export class ShellMcpClient extends BaseMcpClient {
   private isStarted = false;
   private tempScriptPath: string | null = null;
   private tempScriptCleanupTimer: NodeJS.Timeout | null = null;
+  private stderrBuffer: string[] = [];
 
   constructor(
     private readonly command: ResolvedCommandParts,
@@ -205,6 +206,15 @@ export class ShellMcpClient extends BaseMcpClient {
         stdio: ["pipe", "pipe", "pipe"],
       });
 
+      this.logger.trace(
+        {
+          pid: this.process.pid,
+          spawnfile: this.process.spawnfile,
+          spawnargs: this.process.spawnargs,
+        },
+        "Process spawned successfully"
+      );
+
       if (!this.process.stdin || !this.process.stdout || !this.process.stderr) {
         throw new Error("Failed to create process stdio streams");
       }
@@ -216,25 +226,66 @@ export class ShellMcpClient extends BaseMcpClient {
         this.logger.child({ component: "shell-stream-handler" })
       );
 
+      // Track if process exits very quickly (indicates sandbox-exec failure)
+      let hasExitedEarly = false;
+      const earlyExitTimer = setTimeout(() => {
+        // Process survived past 100ms, consider it started successfully
+        this.logger.trace("Process survived past early-exit threshold");
+      }, 100);
+
       // Handle process events
       this.process.on("error", error => {
+        clearTimeout(earlyExitTimer);
         this.logger.error({ error }, "Shell MCP server process error");
         this.cleanup();
       });
 
       this.process.on("exit", (code, signal) => {
-        this.logger.debug(
-          { exitCode: code, signal },
-          "Shell MCP server process exited"
-        );
+        clearTimeout(earlyExitTimer);
+
+        // Detect early exit (< 100ms) which suggests sandbox-exec rejection
+        if (!hasExitedEarly) {
+          hasExitedEarly = true;
+          this.logger.error(
+            {
+              exitCode: code,
+              signal,
+              stderr: this.stderrBuffer.join("\n"),
+              timing: "early-exit-detected",
+            },
+            "Process exited within 100ms - possible sandbox-exec policy rejection"
+          );
+        }
+
+        // Log exit at appropriate level based on whether we expected it
+        const logLevel = this.isStarted && code === 0 ? "debug" : "error";
+        const logData = {
+          exitCode: code,
+          signal,
+          stderr: this.stderrBuffer.join("\n"),
+        };
+
+        if (logLevel === "error") {
+          this.logger.error(
+            logData,
+            "Shell MCP server process exited unexpectedly"
+          );
+        } else {
+          this.logger.debug(logData, "Shell MCP server process exited");
+        }
+
         this.cleanup();
       });
 
-      // Log stderr output
+      // Capture stderr output for error reporting
       this.process.stderr.on("data", (chunk: Buffer) => {
         const stderr = chunk.toString("utf8").trim();
         if (stderr) {
-          this.logger.debug({ stderr }, "Shell MCP server stderr");
+          // Buffer stderr lines for exit reporting
+          this.stderrBuffer.push(stderr);
+
+          // Also log immediately at error level for visibility
+          this.logger.error({ stderr }, "Shell MCP server stderr");
         }
       });
 
@@ -356,5 +407,6 @@ export class ShellMcpClient extends BaseMcpClient {
     this.process = null;
     this.streamHandler = null;
     this.tempScriptPath = null;
+    // Note: Preserve stderr buffer for error reporting in case cleanup is called multiple times
   }
 }

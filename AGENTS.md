@@ -706,4 +706,33 @@ This separation ensures clean architecture where CLI commands focus on argument 
 
 ## Scratch Scripts and Tests
 
-ALL scratch scripts should be either in ./tmp or ./packages/cli/tmp. It is CRITICAL that no debug files, exploration scripts, manual tests not created by a human user, etc. are outside of these directories.
+ALL scratch scripts should be either in ./tmp or ./packages/cli/tmp (or subdirectories thereof). It is CRITICAL that no debug files, exploration scripts, manual tests not created by a human user, etc. are outside of these directories.
+
+## Development Testing with Local Builds
+
+When testing changes to the CLI in development mode, follow this workflow:
+
+1. **Build changes**: After making code changes, the TypeScript must be compiled before testing
+2. **Run install**: Execute `pnpm run --silent dev --dir /full/path/to/your/tmpdir/tmp install` to regenerate MCP server configurations
+3. **Update .mcp.json**: After install, rewrite `/full/path/to/your/tmpdir/tmp/.mcp.json` to use the dev build:
+
+```json
+{
+  "mcpServers": {
+    "mcp-sleep": {
+      "command": "pnpm",
+      "args": [
+        "run",
+        "--silent",
+        "dev",
+        "--dir",
+        "/full/path/to/your/tmpdir/tmp",
+        "run",
+        "mcp-sleep"
+      ]
+    }
+  }
+}
+```
+
+This configuration ensures that the test MCP server uses the development build via `pnpm run dev` rather than a production installation, allowing immediate testing of code changes.

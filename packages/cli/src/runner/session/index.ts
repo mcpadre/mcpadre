@@ -32,6 +32,18 @@ export class InteractiveSessionManager {
     const input = config.input ?? process.stdin;
     const output = config.output ?? process.stdout;
 
+    // Debug stdin state
+    this.config.logger?.debug(
+      {
+        usingStdin: input === process.stdin,
+        isTTY: process.stdin.isTTY,
+        stdinReadable: process.stdin.readable,
+        stdinDestroyed: process.stdin.destroyed,
+        stdinClosed: process.stdin.closed,
+      },
+      "Session input stream state"
+    );
+
     this.streamHandler = new JsonRpcStreamHandler(input, output, config.logger);
     this.setupEventHandlers();
     this.setupSignalHandlers();
