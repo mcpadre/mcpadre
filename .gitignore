@@ -62,3 +62,7 @@ temp/
 
 # Binary outputs
 packages/cli/mcpadre*
+
+
+
+*.bak*
