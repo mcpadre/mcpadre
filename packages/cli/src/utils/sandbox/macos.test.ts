@@ -127,6 +127,35 @@ describe("MacOSSandbox", () => {
       expect(result!.args[4]).toBe("typescript");
       expect(result!.appendCommand).toBe(false);
     });
+
+    it("should not add trailing slashes to subpath rules", () => {
+      const config: SandboxConfig = {
+        enabled: true,
+        networking: false,
+        omitWorkspacePath: true,
+        allowRead: ["/usr/bin", "/home/user/.config"],
+        allowReadWrite: ["/tmp/workspace"],
+      };
+
+      const directoryResolver = createDirectoryResolver(
+        createTestWorkspaceContext("/tmp")
+      );
+      const finalizedConfig = resolveSandboxConfig({
+        config,
+        directoryResolver,
+        parentEnv: process.env,
+      });
+
+      const sandbox = new MacOSSandbox(logger, finalizedConfig);
+      const result = sandbox.buildSandboxArgs("echo", ["test"]);
+
+      expect(result).not.toBeNull();
+      const policy = result!.args[1];
+
+      // Verify no trailing slashes in subpath rules
+      // The policy should contain paths without trailing slashes
+      expect(policy).not.toMatch(/subpath ".*\/"/);
+    });
   });
 
   describe("validate", () => {

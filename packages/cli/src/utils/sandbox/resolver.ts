@@ -2,6 +2,7 @@
 // Resolves SandboxConfig templates to FinalizedSandboxConfig with actual paths.
 
 import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 import { resolvePathTemplates } from "../path-resolver/index.js";
 
@@ -48,6 +49,52 @@ const DEFAULT_SYSTEM_PATHS = [
  * DNS and network configuration files needed when networking is enabled
  */
 const DNS_PATHS = ["/etc/resolv.conf", "/etc/hosts", "/etc/nsswitch.conf"];
+
+/**
+ * Resolves home directory configuration paths that version managers like asdf/mise need.
+ * These paths allow version managers to locate executables and read configuration.
+ *
+ * @param homeDir The user's home directory path
+ * @returns Array of configuration file/directory paths
+ */
+function resolveHomeConfigPaths(homeDir: string): string[] {
+  const configPaths = [
+    ".asdfrc", // asdf configuration file
+    ".tool-versions", // asdf/mise version specification
+    ".config/mise", // mise configuration directory
+  ];
+
+  return configPaths.map(p => `${homeDir}/${p}`);
+}
+
+/**
+ * Generates paths for .tool-versions files in all parent directories from a given path up to root.
+ * Version managers like asdf/mise search upward through parent directories for .tool-versions files.
+ *
+ * Example: /Users/ed/projects/app would generate:
+ * - /Users/ed/projects/app/.tool-versions
+ * - /Users/ed/projects/.tool-versions
+ * - /Users/ed/.tool-versions
+ * - /Users/.tool-versions
+ * - /.tool-versions
+ *
+ * @param startPath The starting directory path
+ * @returns Array of .tool-versions file paths from startPath up to root
+ */
+function resolveAncestorToolVersions(startPath: string): string[] {
+  const paths: string[] = [];
+  let currentPath = startPath;
+
+  while (currentPath !== "/") {
+    paths.push(join(currentPath, ".tool-versions"));
+    currentPath = dirname(currentPath);
+  }
+
+  // Add root-level .tool-versions
+  paths.push("/.tool-versions");
+
+  return paths;
+}
 
 /**
  * Resolves a SandboxConfig with template strings to a FinalizedSandboxConfig
@@ -123,6 +170,24 @@ export function resolveSandboxConfig(
   if (existsSync(shell)) {
     allowReadTemplates.push(shell);
   }
+
+  // Add home directory config paths for version managers (asdf/mise)
+  // These allow shims to locate executables via config files like .asdfrc and .tool-versions
+  const homeDir = parentEnv["HOME"] ?? parentEnv["USERPROFILE"];
+  if (homeDir) {
+    const homeConfigPaths = resolveHomeConfigPaths(homeDir);
+    for (const configPath of homeConfigPaths) {
+      if (existsSync(configPath)) {
+        allowReadTemplates.push(configPath);
+      }
+    }
+  }
+
+  // Add .tool-versions files in all ancestor directories from workspace up to root
+  // This allows asdf/mise to search upward for version configuration files
+  const workspacePath = directoryResolver.workspace;
+  const ancestorToolVersions = resolveAncestorToolVersions(workspacePath);
+  allowReadTemplates.push(...ancestorToolVersions);
 
   // Add OS temp directory for tempfile access (needs read+write for UV and other tools)
   allowReadWriteTemplates.push("{{parentEnv.TMPDIR}}" as PathStringTemplate);

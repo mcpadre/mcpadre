@@ -79,8 +79,9 @@ class SExpressionBuilder {
 
       // Escape special characters in paths
       const escapedPath = canonicalPath.replace(/"/g, '\\"');
+      // subpath works correctly without trailing slashes for both files and directories
       this.expressions.push(
-        `(allow ${operation} (${permission} "${escapedPath}/"))`
+        `(allow ${operation} (${permission} "${escapedPath}"))`
       );
     }
     return this;
@@ -112,6 +113,12 @@ export class MacOSSandbox extends SandboxImplementation {
     // Generate the S-expression policy
     const policy = this.generatePolicy();
 
+    // Log the full policy at trace level for debugging
+    this.logger.trace(
+      { policy, policyLength: policy.length },
+      "Generated sandbox-exec S-expression policy"
+    );
+
     // sandbox-exec arguments
     const sandboxArgs: string[] = [
       "-p",
@@ -119,6 +126,17 @@ export class MacOSSandbox extends SandboxImplementation {
       command, // The command to run
       ...args, // Command arguments
     ];
+
+    // Log the complete sandbox-exec command
+    this.logger.debug(
+      {
+        executable: this.sandboxExecPath ?? "sandbox-exec",
+        policyPreview: `${policy.substring(0, 200)}...`,
+        wrappedCommand: command,
+        wrappedArgs: args,
+      },
+      "Built sandbox-exec command"
+    );
 
     return {
       executable: this.sandboxExecPath ?? "sandbox-exec",

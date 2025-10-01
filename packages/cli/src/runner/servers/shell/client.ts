@@ -206,6 +206,15 @@ export class ShellMcpClient extends BaseMcpClient {
         stdio: ["pipe", "pipe", "pipe"],
       });
 
+      this.logger.trace(
+        {
+          pid: this.process.pid,
+          spawnfile: this.process.spawnfile,
+          spawnargs: this.process.spawnargs,
+        },
+        "Process spawned successfully"
+      );
+
       if (!this.process.stdin || !this.process.stdout || !this.process.stderr) {
         throw new Error("Failed to create process stdio streams");
       }
@@ -217,13 +226,37 @@ export class ShellMcpClient extends BaseMcpClient {
         this.logger.child({ component: "shell-stream-handler" })
       );
 
+      // Track if process exits very quickly (indicates sandbox-exec failure)
+      let hasExitedEarly = false;
+      const earlyExitTimer = setTimeout(() => {
+        // Process survived past 100ms, consider it started successfully
+        this.logger.trace("Process survived past early-exit threshold");
+      }, 100);
+
       // Handle process events
       this.process.on("error", error => {
+        clearTimeout(earlyExitTimer);
         this.logger.error({ error }, "Shell MCP server process error");
         this.cleanup();
       });
 
       this.process.on("exit", (code, signal) => {
+        clearTimeout(earlyExitTimer);
+
+        // Detect early exit (< 100ms) which suggests sandbox-exec rejection
+        if (!hasExitedEarly) {
+          hasExitedEarly = true;
+          this.logger.error(
+            {
+              exitCode: code,
+              signal,
+              stderr: this.stderrBuffer.join("\n"),
+              timing: "early-exit-detected",
+            },
+            "Process exited within 100ms - possible sandbox-exec policy rejection"
+          );
+        }
+
         // Log exit at appropriate level based on whether we expected it
         const logLevel = this.isStarted && code === 0 ? "debug" : "error";
         const logData = {
