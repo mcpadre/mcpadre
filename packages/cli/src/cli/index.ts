@@ -7,6 +7,7 @@ import { type LogFormat, type LogLevel } from "../logger/index.js";
 
 import { makeDebugCommand } from "./debug/index.js";
 import { makeHostCommand } from "./host/index.js";
+import { makeSchemaCommand } from "./schema/index.js";
 import { makeServerCommand } from "./server/index.js";
 import { CLI_LOGGER, initializeLogger, setCliLogLevel } from "./_deps.js";
 import {
@@ -161,6 +162,7 @@ export const rootCommand = new Command("mcpadre")
   .addCommand(makeHelpmeCommand())
   .addCommand(makeHostCommand())
   .addCommand(makeInitCommand())
+  .addCommand(makeSchemaCommand())
   .addCommand(makeServerCommand())
   .addCommand(makeInstallCommand())
   .addCommand(makeOutdatedCommand())

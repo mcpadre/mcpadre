@@ -1,6 +1,10 @@
 .tmp/
 
+.mcpadre/
+mcpadre.yaml
+
 # mcpadre configurations (machine-specific paths and server platform files)
+.mcp.json
 .mcpadre/logs
 .mcpadre/servers/*/.venv
 .mcpadre/servers/*/logs
