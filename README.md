@@ -18,6 +18,8 @@ Obviously, MCPs unlock a lot of value in the LLM ecosystem, but equally as obvio
 
 ## Getting Started
 
+**[Our documentation](./doc/00-INDEX.md) is a work in progress.** You can start with the [quick start](./doc/01-QUICK_START.md).
+
 You'll need NodeJS (we test against 22.x and follow NodeJS's support calendar; bugs against 20.x are welcome until it reaches EOL) and whatever runtimes for the MCPs you want to use. `mcpadre` is developed using `asdf`, but should generally also be `mise` compatible--untested, but bugs against `mise` will be prioritized. You'll need Docker for containerized MCPs, too. Generally speaking, _`mcpadre` will let you know if it can't source a dependency for you_ (and if it doesn't, that's a bug, let me know!).
 
 ## Frequently Asked Questions
